@@ -2,6 +2,8 @@
 
 from datetime import datetime, timedelta
 
+from src.config import utcnow
+
 import pytest
 from pydantic import ValidationError
 
@@ -314,7 +316,7 @@ class TestPlaylistResponseSchema:
             "tracks": tracks,
             "total_tracks": 2,
             "duration_ms": 420000,
-            "created_at": datetime.utcnow(),
+            "created_at": utcnow(),
             "region_info": {
                 "country_code": "US",
                 "country_name": "United States",
@@ -357,7 +359,7 @@ class TestPlaylistResponseSchema:
             name="Test Playlist",
             tracks=tracks,
             total_tracks=2,
-            created_at=datetime.utcnow(),
+            created_at=utcnow(),
         )
 
         # Should compute duration if not provided
@@ -385,7 +387,7 @@ class TestPlaylistResponseSchema:
             name="Test Playlist",
             tracks=tracks,
             total_tracks=1,
-            created_at=datetime.utcnow(),
+            created_at=utcnow(),
         )
         assert playlist.total_tracks == 1
 
@@ -395,7 +397,7 @@ class TestPlaylistResponseSchema:
             name="Test Playlist",
             tracks=tracks,
             total_tracks=5,  # Doesn't match actual track count
-            created_at=datetime.utcnow(),
+            created_at=utcnow(),
         )
         # Should either auto-correct or validate
         assert playlist_inconsistent.total_tracks == 5  # Or should be corrected to 1
@@ -490,14 +492,14 @@ class TestOrbitalPlaylistSchema:
             "start_position": {
                 "latitude": 40.7128,
                 "longitude": -74.0060,
-                "timestamp": datetime.utcnow(),
+                "timestamp": utcnow(),
             },
             "end_position": {
                 "latitude": 51.5074,
                 "longitude": -0.1278,
-                "timestamp": datetime.utcnow() + timedelta(minutes=90),
+                "timestamp": utcnow() + timedelta(minutes=90),
             },
-            "created_at": datetime.utcnow(),
+            "created_at": utcnow(),
         }
 
         orbital_playlist = OrbitalPlaylist(**orbital_data)
@@ -522,7 +524,7 @@ class TestOrbitalPlaylistSchema:
                 tracks=[],
                 duration_minutes=duration,
                 regions_covered=[],
-                created_at=datetime.utcnow(),
+                created_at=utcnow(),
             )
             assert orbital_playlist.duration_minutes == duration
 
@@ -537,7 +539,7 @@ class TestOrbitalPlaylistSchema:
                     tracks=[],
                     duration_minutes=invalid_duration,
                     regions_covered=[],
-                    created_at=datetime.utcnow(),
+                    created_at=utcnow(),
                 )
 
     def test_orbital_playlist_schema_satellite_validation(self) -> None:
@@ -554,7 +556,7 @@ class TestOrbitalPlaylistSchema:
                 tracks=[],
                 duration_minutes=90,
                 regions_covered=[],
-                created_at=datetime.utcnow(),
+                created_at=utcnow(),
             )
             assert orbital_playlist.satellite_id == satellite_id
 
@@ -569,7 +571,7 @@ class TestOrbitalPlaylistSchema:
                     tracks=[],
                     duration_minutes=90,
                     regions_covered=[],
-                    created_at=datetime.utcnow(),
+                    created_at=utcnow(),
                 )
 
 
@@ -583,7 +585,7 @@ class TestPositionSchema:
         position_data = {
             "latitude": 40.7128,
             "longitude": -74.0060,
-            "timestamp": datetime.utcnow(),
+            "timestamp": utcnow(),
             "altitude_km": 408.5,
         }
 
@@ -600,7 +602,7 @@ class TestPositionSchema:
 
         # Valid coordinates
         valid_position = Position(
-            latitude=45.0, longitude=-90.0, timestamp=datetime.utcnow()
+            latitude=45.0, longitude=-90.0, timestamp=utcnow()
         )
         assert valid_position.latitude == 45.0
         assert valid_position.longitude == -90.0
@@ -610,7 +612,7 @@ class TestPositionSchema:
             Position(
                 latitude=95.0,  # > 90
                 longitude=-90.0,
-                timestamp=datetime.utcnow(),
+                timestamp=utcnow(),
             )
 
         # Invalid longitude
@@ -618,7 +620,7 @@ class TestPositionSchema:
             Position(
                 latitude=45.0,
                 longitude=185.0,  # > 180
-                timestamp=datetime.utcnow(),
+                timestamp=utcnow(),
             )
 
 
@@ -652,13 +654,13 @@ class TestPlaylistSchemaIntegration:
 
         # Create positions
         start_position = Position(
-            latitude=40.7128, longitude=-74.0060, timestamp=datetime.utcnow()
+            latitude=40.7128, longitude=-74.0060, timestamp=utcnow()
         )
 
         end_position = Position(
             latitude=51.5074,
             longitude=-0.1278,
-            timestamp=datetime.utcnow() + timedelta(minutes=90),
+            timestamp=utcnow() + timedelta(minutes=90),
         )
 
         # Create orbital playlist
@@ -670,7 +672,7 @@ class TestPlaylistSchemaIntegration:
             regions_covered=["US", "GB"],
             start_position=start_position,
             end_position=end_position,
-            created_at=datetime.utcnow(),
+            created_at=utcnow(),
         )
 
         assert orbital_playlist.tracks[0].artists[0].name == "Test Artist"
@@ -702,7 +704,7 @@ class TestPlaylistSchemaIntegration:
             tracks=[track],
             total_tracks=1,
             duration_ms=180000,
-            created_at=datetime.utcnow(),
+            created_at=utcnow(),
             region_info=region_info,
         )
 

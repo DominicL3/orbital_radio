@@ -7,8 +7,9 @@ and geographic-based music selection with proper mocking of external dependencie
 
 import pytest
 from unittest.mock import Mock, patch
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Dict, List, Any
+from src.config import utcnow
 from fastapi.testclient import TestClient
 from fastapi import status
 
@@ -35,7 +36,7 @@ class TestPlaylistEndpoints:
             "session_id": "test_session_123",
             "satellite_id": "iss",
             "duration_minutes": 90,
-            "start_time": datetime.utcnow().isoformat(),
+            "start_time": utcnow().isoformat(),
         }
 
     @pytest.fixture
@@ -55,17 +56,17 @@ class TestPlaylistEndpoints:
                 track["duration_ms"] for track in mock_playlist_tracks
             )
             // 1000,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": utcnow().isoformat(),
             "orbital_path": [
                 {
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": utcnow().isoformat(),
                     "latitude": 40.7,
                     "longitude": -74.0,
                     "region": "US",
                 },
                 {
                     "timestamp": (
-                        datetime.utcnow() + timedelta(minutes=30)
+                        utcnow() + timedelta(minutes=30)
                     ).isoformat(),
                     "latitude": 51.5,
                     "longitude": -0.1,
@@ -84,7 +85,7 @@ class TestPlaylistEndpoints:
             {
                 "selected_for_region": "US",
                 "satellite_position": {"latitude": 40.7128, "longitude": -74.0060},
-                "selected_at": datetime.utcnow().isoformat(),
+                "selected_at": utcnow().isoformat(),
                 "track_index": 5,
             }
         )
@@ -368,7 +369,7 @@ class TestPlaylistEndpoints:
         previous_track = mock_track_data.copy()
         previous_track.update(
             {
-                "played_at": (datetime.utcnow() - timedelta(minutes=3)).isoformat(),
+                "played_at": (utcnow() - timedelta(minutes=3)).isoformat(),
                 "track_index": 3,
             }
         )
@@ -428,7 +429,7 @@ class TestPlaylistEndpoints:
         track_id = "track_123"
         played_data = {
             "track_id": track_id,
-            "played_at": datetime.utcnow().isoformat(),
+            "played_at": utcnow().isoformat(),
             "position_ms": 0,
             "duration_ms": 180000,
         }
@@ -488,7 +489,7 @@ class TestPlaylistEndpoints:
         """Test marking the same track as played multiple times."""
         session_id = "test_session_123"
         track_id = "track_123"
-        played_data = {"track_id": track_id, "played_at": datetime.utcnow().isoformat()}
+        played_data = {"track_id": track_id, "played_at": utcnow().isoformat()}
 
         with patch(
             "src.services.session_service.SessionService"

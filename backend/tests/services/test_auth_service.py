@@ -1,8 +1,10 @@
 """Test cases for authentication service."""
 
 from unittest.mock import Mock, patch
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Dict, Any
+
+from src.config import utcnow
 
 import pytest
 
@@ -190,11 +192,11 @@ class TestAuthService:
             "session_id": "session_123",
             "spotify_tokens": {
                 "access_token": "token",
-                "expires_at": datetime.utcnow() + timedelta(hours=1),
+                "expires_at": utcnow() + timedelta(hours=1),
             },
             "user_profile": {"id": "user_123"},
-            "created_at": datetime.utcnow(),
-            "expires_at": datetime.utcnow() + timedelta(hours=3),
+            "created_at": utcnow(),
+            "expires_at": utcnow() + timedelta(hours=3),
         }
 
         service = AuthService()
@@ -213,11 +215,11 @@ class TestAuthService:
             "session_id": "session_123",
             "spotify_tokens": {
                 "access_token": "token",
-                "expires_at": datetime.utcnow() - timedelta(hours=1),
+                "expires_at": utcnow() - timedelta(hours=1),
             },
             "user_profile": {"id": "user_123"},
-            "created_at": datetime.utcnow() - timedelta(hours=4),
-            "expires_at": datetime.utcnow() - timedelta(hours=1),
+            "created_at": utcnow() - timedelta(hours=4),
+            "expires_at": utcnow() - timedelta(hours=1),
         }
 
         service = AuthService()
@@ -249,15 +251,15 @@ class TestTokenManagement:
         service = AuthService()
 
         # Test non-expired token
-        future_time = datetime.utcnow() + timedelta(hours=1)
+        future_time = utcnow() + timedelta(hours=1)
         assert service.is_token_expired(future_time) is False
 
         # Test expired token
-        past_time = datetime.utcnow() - timedelta(hours=1)
+        past_time = utcnow() - timedelta(hours=1)
         assert service.is_token_expired(past_time) is True
 
         # Test token expiring soon (within 5 minutes)
-        soon_time = datetime.utcnow() + timedelta(minutes=3)
+        soon_time = utcnow() + timedelta(minutes=3)
         assert service.is_token_expired(soon_time) is True
 
     @patch("src.core.spotify_client.SpotifyClient.refresh_user_token")
@@ -281,7 +283,7 @@ class TestTokenManagement:
             "spotify_tokens": {
                 "access_token": "old_token",
                 "refresh_token": "refresh_token",
-                "expires_at": datetime.utcnow() + timedelta(minutes=3),
+                "expires_at": utcnow() + timedelta(minutes=3),
             }
         }
 
@@ -305,7 +307,7 @@ class TestTokenManagement:
             "spotify_tokens": {
                 "access_token": "old_token",
                 "refresh_token": "invalid_refresh_token",
-                "expires_at": datetime.utcnow() + timedelta(minutes=3),
+                "expires_at": utcnow() + timedelta(minutes=3),
             }
         }
 

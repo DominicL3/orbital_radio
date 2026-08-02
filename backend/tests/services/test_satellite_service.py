@@ -2,8 +2,10 @@
 
 from unittest.mock import Mock, patch
 from typing import Dict, Any, List
-from datetime import datetime, timedelta
+from datetime import timedelta
 import pytest
+
+from src.config import utcnow
 
 
 @pytest.fixture
@@ -15,7 +17,7 @@ def mock_tle_data() -> Dict[str, Any]:
         "norad_id": 25544,
         "tle_line1": "1 25544U 98067A   21001.00000000  .00001234  00000-0  12345-4 0  9990",
         "tle_line2": "2 25544  51.6464 123.4567  0003456 123.4567 234.5678 15.49123456123456",
-        "epoch": datetime.utcnow(),
+        "epoch": utcnow(),
         "is_active": True,
     }
 
@@ -191,19 +193,19 @@ class TestSatelliteService:
 
         mock_position_data = [
             {
-                "timestamp": datetime.utcnow(),
+                "timestamp": utcnow(),
                 "latitude": 40.7128,
                 "longitude": -74.0060,
                 "altitude_km": 408,
             },
             {
-                "timestamp": datetime.utcnow() + timedelta(minutes=5),
+                "timestamp": utcnow() + timedelta(minutes=5),
                 "latitude": 41.0,
                 "longitude": -73.0,
                 "altitude_km": 408,
             },
             {
-                "timestamp": datetime.utcnow() + timedelta(minutes=10),
+                "timestamp": utcnow() + timedelta(minutes=10),
                 "latitude": 42.0,
                 "longitude": -72.0,
                 "altitude_km": 408,
@@ -291,8 +293,8 @@ class TestTLEDataManagement:
 
         # Test fresh data (updated recently)
         fresh_tle = {
-            "last_updated": datetime.utcnow() - timedelta(hours=1),
-            "epoch": datetime.utcnow() - timedelta(hours=2),
+            "last_updated": utcnow() - timedelta(hours=1),
+            "epoch": utcnow() - timedelta(hours=2),
         }
 
         with patch.object(
@@ -303,8 +305,8 @@ class TestTLEDataManagement:
 
         # Test stale data (updated long ago)
         stale_tle = {
-            "last_updated": datetime.utcnow() - timedelta(hours=25),
-            "epoch": datetime.utcnow() - timedelta(hours=26),
+            "last_updated": utcnow() - timedelta(hours=25),
+            "epoch": utcnow() - timedelta(hours=26),
         }
 
         with patch.object(
@@ -323,7 +325,7 @@ class TestTLEDataManagement:
         valid_tle = {
             "tle_line1": "1 25544U 98067A   21001.00000000  .00001234  00000-0  12345-4 0  9990",
             "tle_line2": "2 25544  51.6464 123.4567  0003456 123.4567 234.5678 15.49123456123456",
-            "epoch": datetime.utcnow(),
+            "epoch": utcnow(),
             "norad_id": 25544,
         }
 
@@ -367,7 +369,7 @@ class TestSatellitePositionCalculations:
         service = SatelliteService()
 
         current_position = {
-            "timestamp": datetime.utcnow(),
+            "timestamp": utcnow(),
             "latitude": 40.7128,
             "longitude": -74.0060,
             "altitude_km": 408,
@@ -394,7 +396,7 @@ class TestSatellitePositionCalculations:
             "elevation_deg": 45.0,
             "azimuth_deg": 180.0,
             "range_km": 800.0,
-            "next_pass": datetime.utcnow() + timedelta(hours=2),
+            "next_pass": utcnow() + timedelta(hours=2),
         }
 
         observer_lat, observer_lon = 40.7128, -74.0060  # NYC

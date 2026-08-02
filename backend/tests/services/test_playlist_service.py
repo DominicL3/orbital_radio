@@ -2,7 +2,9 @@
 
 from unittest.mock import Mock, patch
 from typing import Dict, Any
-from datetime import datetime, timedelta
+from datetime import timedelta
+
+from src.config import utcnow
 
 import pytest
 
@@ -27,16 +29,16 @@ def mock_orbital_session() -> Dict[str, Any]:
     return {
         "session_id": "session_123",
         "satellite_id": "iss",
-        "start_time": datetime.utcnow(),
+        "start_time": utcnow(),
         "current_position": {"latitude": 40.7128, "longitude": -74.0060},
         "played_tracks": {"track_1", "track_2"},
         "track_history": [
             {
                 "id": "track_1",
                 "name": "Previous Song",
-                "timestamp": datetime.utcnow() - timedelta(minutes=5),
+                "timestamp": utcnow() - timedelta(minutes=5),
             },
-            {"id": "track_2", "name": "Current Song", "timestamp": datetime.utcnow()},
+            {"id": "track_2", "name": "Current Song", "timestamp": utcnow()},
         ],
         "playback_position": {"track_2": 45000},  # 45 seconds into current track
     }
@@ -202,11 +204,11 @@ class TestPlaylistService:
             service.satellite_service, "get_satellite_positions"
         ) as mock_positions:
             mock_positions.return_value = [
-                {"latitude": 40.0, "longitude": -74.0, "timestamp": datetime.utcnow()},
+                {"latitude": 40.0, "longitude": -74.0, "timestamp": utcnow()},
                 {
                     "latitude": 50.0,
                     "longitude": -0.1,
-                    "timestamp": datetime.utcnow() + timedelta(minutes=90),
+                    "timestamp": utcnow() + timedelta(minutes=90),
                 },
             ]
 
@@ -334,7 +336,7 @@ class TestTrackHistoryManagement:
 
         # Create session with large history
         large_history = [
-            {"id": f"track_{i}", "name": f"Song {i}", "timestamp": datetime.utcnow()}
+            {"id": f"track_{i}", "name": f"Song {i}", "timestamp": utcnow()}
             for i in range(200)
         ]
         session_large_history = {**mock_orbital_session, "track_history": large_history}

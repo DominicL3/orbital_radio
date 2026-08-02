@@ -7,11 +7,13 @@ and error handling with proper mocking of external dependencies.
 
 import pytest
 from unittest.mock import patch
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Dict, List, Any
 from fastapi.testclient import TestClient
 from fastapi import status
 import math
+
+from src.config import utcnow
 
 # Import test fixtures from conftest
 
@@ -75,15 +77,15 @@ class TestSatelliteEndpoints:
             "norad_id": 25544,
             "tle_line1": "1 25544U 98067A   23001.00000000  .00002182  00000-0  40768-4 0  9990",
             "tle_line2": "2 25544  51.6461 339.7939 0001222  92.8340 267.3124 15.49309239366831",
-            "epoch": datetime.utcnow().isoformat(),
-            "last_updated": datetime.utcnow().isoformat(),
+            "epoch": utcnow().isoformat(),
+            "last_updated": utcnow().isoformat(),
         }
 
     @pytest.fixture
     def mock_positions_response(self) -> List[Dict[str, Any]]:
         """Mock satellite position predictions."""
         positions = []
-        start_time = datetime.utcnow()
+        start_time = utcnow()
 
         for i in range(10):
             positions.append(
@@ -314,7 +316,7 @@ class TestSatelliteEndpoints:
         # Mock stale TLE data (older than 24 hours)
         stale_tle = mock_tle_response.copy()
         stale_tle["last_updated"] = (
-            datetime.utcnow() - timedelta(hours=25)
+            utcnow() - timedelta(hours=25)
         ).isoformat()
 
         with patch("src.services.satellite_service.SatelliteService") as mock_service:
@@ -602,9 +604,9 @@ class TestSatelliteEndpoints:
                 mock_satellite_list
             )
             mock_service.return_value.get_data_freshness.return_value = {
-                "last_tle_update": datetime.utcnow().isoformat(),
+                "last_tle_update": utcnow().isoformat(),
                 "next_scheduled_update": (
-                    datetime.utcnow() + timedelta(hours=12)
+                    utcnow() + timedelta(hours=12)
                 ).isoformat(),
                 "stale_satellites": [],
             }
@@ -634,7 +636,7 @@ class TestSatelliteEndpoints:
             "argument_of_perigee": 92.8340,
             "mean_anomaly": 267.3124,
             "mean_motion": 15.49309239,
-            "epoch": datetime.utcnow().isoformat(),
+            "epoch": utcnow().isoformat(),
         }
 
         with patch("src.services.satellite_service.SatelliteService") as mock_service:
@@ -662,7 +664,7 @@ class TestSatelliteEndpoints:
 
         # Mock ground track positions
         mock_ground_track = []
-        start_time = datetime.utcnow()
+        start_time = utcnow()
 
         for i in range(36):  # 5-minute intervals for 3 hours
             lat = 51.6 * math.sin(i * 0.1)  # Simulate ISS-like orbit
@@ -707,11 +709,11 @@ class TestSatelliteEndpoints:
 
         mock_visibility = [
             {
-                "start_time": datetime.utcnow().isoformat(),
-                "end_time": (datetime.utcnow() + timedelta(minutes=6)).isoformat(),
+                "start_time": utcnow().isoformat(),
+                "end_time": (utcnow() + timedelta(minutes=6)).isoformat(),
                 "max_elevation": 85.2,
                 "max_elevation_time": (
-                    datetime.utcnow() + timedelta(minutes=3)
+                    utcnow() + timedelta(minutes=3)
                 ).isoformat(),
                 "brightness": -3.9,  # Very bright pass
             }

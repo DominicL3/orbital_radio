@@ -2,7 +2,9 @@
 
 from unittest.mock import patch
 from typing import Dict, Any
-from datetime import datetime, timedelta
+from datetime import timedelta
+
+from src.config import utcnow
 
 import pytest
 
@@ -15,7 +17,7 @@ def mock_session_data() -> Dict[str, Any]:
         "spotify_tokens": {
             "access_token": "test_access_token",
             "refresh_token": "test_refresh_token",
-            "expires_at": datetime.utcnow() + timedelta(hours=1),
+            "expires_at": utcnow() + timedelta(hours=1),
         },
         "user_profile": {
             "id": "user_123",
@@ -24,13 +26,13 @@ def mock_session_data() -> Dict[str, Any]:
         },
         "orbital_session": {
             "satellite_id": "iss",
-            "start_time": datetime.utcnow(),
+            "start_time": utcnow(),
             "played_tracks": {"track_1", "track_2"},
             "track_history": [],
         },
-        "created_at": datetime.utcnow(),
-        "expires_at": datetime.utcnow() + timedelta(hours=3),
-        "last_activity": datetime.utcnow(),
+        "created_at": utcnow(),
+        "expires_at": utcnow() + timedelta(hours=3),
+        "last_activity": utcnow(),
     }
 
 
@@ -96,7 +98,7 @@ class TestCacheService:
                 "satellite_id": "noaa19",
                 "played_tracks": {"track_3", "track_4"},
             },
-            "last_activity": datetime.utcnow(),
+            "last_activity": utcnow(),
         }
 
         cache_service.update_session(session_id, update_data)
@@ -155,18 +157,18 @@ class TestSessionExpiration:
         expired_session = {
             "session_id": "expired_123",
             "user_profile": {"id": "user_123"},
-            "created_at": datetime.utcnow() - timedelta(hours=5),
-            "expires_at": datetime.utcnow() - timedelta(hours=1),
-            "last_activity": datetime.utcnow() - timedelta(hours=2),
+            "created_at": utcnow() - timedelta(hours=5),
+            "expires_at": utcnow() - timedelta(hours=1),
+            "last_activity": utcnow() - timedelta(hours=2),
         }
 
         # Create active session
         active_session = {
             "session_id": "active_123",
             "user_profile": {"id": "user_456"},
-            "created_at": datetime.utcnow(),
-            "expires_at": datetime.utcnow() + timedelta(hours=2),
-            "last_activity": datetime.utcnow(),
+            "created_at": utcnow(),
+            "expires_at": utcnow() + timedelta(hours=2),
+            "last_activity": utcnow(),
         }
 
         expired_id = cache_service.create_session(expired_session)
@@ -174,7 +176,7 @@ class TestSessionExpiration:
 
         # Manually expire the session
         cache_service.session_cache[expired_id]["expires_at"] = (
-            datetime.utcnow() - timedelta(hours=1)
+            utcnow() - timedelta(hours=1)
         )
 
         # Run cleanup
@@ -194,16 +196,16 @@ class TestSessionExpiration:
 
         # Test expired session
         expired_session = {
-            "expires_at": datetime.utcnow() - timedelta(hours=1),
-            "last_activity": datetime.utcnow() - timedelta(hours=2),
+            "expires_at": utcnow() - timedelta(hours=1),
+            "last_activity": utcnow() - timedelta(hours=2),
         }
 
         assert cache_service._is_session_expired(expired_session) is True
 
         # Test active session
         active_session = {
-            "expires_at": datetime.utcnow() + timedelta(hours=1),
-            "last_activity": datetime.utcnow() - timedelta(minutes=30),
+            "expires_at": utcnow() + timedelta(hours=1),
+            "last_activity": utcnow() - timedelta(minutes=30),
         }
 
         assert cache_service._is_session_expired(active_session) is False
@@ -257,8 +259,8 @@ class TestTLECaching:
             "satellite_id": "iss",
             "tle_line1": "1 25544U 98067A   21001.00000000  .00001234  00000-0  12345-4 0  9990",
             "tle_line2": "2 25544  51.6464 123.4567  0003456 123.4567 234.5678 15.49123456123456",
-            "epoch": datetime.utcnow(),
-            "last_updated": datetime.utcnow(),
+            "epoch": utcnow(),
+            "last_updated": utcnow(),
         }
 
         cache_service.cache_tle_data("iss", tle_data)
@@ -286,8 +288,8 @@ class TestTLECaching:
         # Fresh TLE data
         fresh_tle = {
             "satellite_id": "iss",
-            "last_updated": datetime.utcnow() - timedelta(hours=1),
-            "epoch": datetime.utcnow() - timedelta(hours=2),
+            "last_updated": utcnow() - timedelta(hours=1),
+            "epoch": utcnow() - timedelta(hours=2),
         }
 
         cache_service.cache_tle_data("iss", fresh_tle)
@@ -296,8 +298,8 @@ class TestTLECaching:
         # Stale TLE data
         stale_tle = {
             "satellite_id": "noaa19",
-            "last_updated": datetime.utcnow() - timedelta(hours=25),
-            "epoch": datetime.utcnow() - timedelta(hours=26),
+            "last_updated": utcnow() - timedelta(hours=25),
+            "epoch": utcnow() - timedelta(hours=26),
         }
 
         cache_service.cache_tle_data("noaa19", stale_tle)
@@ -312,12 +314,12 @@ class TestTLECaching:
         # Add fresh and stale TLE data
         fresh_tle = {
             "satellite_id": "iss",
-            "last_updated": datetime.utcnow() - timedelta(hours=1),
+            "last_updated": utcnow() - timedelta(hours=1),
         }
 
         stale_tle = {
             "satellite_id": "noaa19",
-            "last_updated": datetime.utcnow() - timedelta(hours=25),
+            "last_updated": utcnow() - timedelta(hours=25),
         }
 
         cache_service.cache_tle_data("iss", fresh_tle)
@@ -349,7 +351,7 @@ class TestPlaylistCaching:
                 {"id": "track_1", "name": "Song 1"},
                 {"id": "track_2", "name": "Song 2"},
             ],
-            "cached_at": datetime.utcnow(),
+            "cached_at": utcnow(),
         }
 
         cache_key = "US_Top_50"
@@ -369,7 +371,7 @@ class TestPlaylistCaching:
         expired_playlist = {
             "region_code": "GB",
             "tracks": [{"id": "track_1", "name": "Song 1"}],
-            "cached_at": datetime.utcnow() - timedelta(hours=25),
+            "cached_at": utcnow() - timedelta(hours=25),
         }
 
         cache_key = "GB_Top_50"
@@ -414,8 +416,8 @@ class TestMemoryManagement:
         for i in range(10):
             session_data = {
                 "user_profile": {"id": f"user_{i}"},
-                "created_at": datetime.utcnow(),
-                "expires_at": datetime.utcnow() + timedelta(hours=3),
+                "created_at": utcnow(),
+                "expires_at": utcnow() + timedelta(hours=3),
             }
             session_id = cache_service.create_session(session_data)
             session_ids.append(session_id)
@@ -443,8 +445,8 @@ class TestMemoryManagement:
                     "id": f"user_{i}",
                     "data": "x" * 1000,
                 },  # Add some bulk
-                "created_at": datetime.utcnow(),
-                "expires_at": datetime.utcnow() + timedelta(hours=3),
+                "created_at": utcnow(),
+                "expires_at": utcnow() + timedelta(hours=3),
             }
             cache_service.create_session(session_data)
 
@@ -483,8 +485,8 @@ class TestMemoryManagement:
         for i in range(3):
             session_data = {
                 "user_profile": {"id": f"user_{i}"},
-                "created_at": datetime.utcnow(),
-                "expires_at": datetime.utcnow() + timedelta(hours=3),
+                "created_at": utcnow(),
+                "expires_at": utcnow() + timedelta(hours=3),
             }
             session_id = cache_service.create_session(session_data)
             session_ids.append(session_id)
@@ -495,8 +497,8 @@ class TestMemoryManagement:
         # Add new session (should evict least recently used)
         new_session_data = {
             "user_profile": {"id": "user_new"},
-            "created_at": datetime.utcnow(),
-            "expires_at": datetime.utcnow() + timedelta(hours=3),
+            "created_at": utcnow(),
+            "expires_at": utcnow() + timedelta(hours=3),
         }
         cache_service.create_session(new_session_data)
 
@@ -522,8 +524,8 @@ class TestConcurrency:
             for i in range(10):
                 session_data = {
                     "user_profile": {"id": f"user_{thread_id}_{i}"},
-                    "created_at": datetime.utcnow(),
-                    "expires_at": datetime.utcnow() + timedelta(hours=3),
+                    "created_at": utcnow(),
+                    "expires_at": utcnow() + timedelta(hours=3),
                 }
                 session_id = cache_service.create_session(session_data)
                 results.append(session_id)
@@ -554,8 +556,8 @@ class TestConcurrency:
         for i in range(20):
             session_data = {
                 "user_profile": {"id": f"user_{i}"},
-                "created_at": datetime.utcnow(),
-                "expires_at": datetime.utcnow() + timedelta(hours=3),
+                "created_at": utcnow(),
+                "expires_at": utcnow() + timedelta(hours=3),
             }
             cache_service.create_session(session_data)
 
@@ -624,7 +626,7 @@ class TestErrorHandling:
             with pytest.raises(MemoryError):
                 session_data = {
                     "user_profile": {"id": "user_test"},
-                    "created_at": datetime.utcnow(),
-                    "expires_at": datetime.utcnow() + timedelta(hours=3),
+                    "created_at": utcnow(),
+                    "expires_at": utcnow() + timedelta(hours=3),
                 }
                 cache_service.create_session(session_data)

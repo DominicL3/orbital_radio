@@ -8,9 +8,11 @@ in the Orbital Radio backend test suite.
 import pytest
 import tempfile
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import timedelta
 from pathlib import Path
 from typing import Dict, Any, Generator
+
+from src.config import utcnow
 
 
 # Mock database connection for testing
@@ -54,7 +56,7 @@ def mock_spotify_tokens() -> Dict[str, Any]:
     return {
         "access_token": "mock_access_token_12345",
         "refresh_token": "mock_refresh_token_67890",
-        "expires_at": datetime.utcnow() + timedelta(hours=1),
+        "expires_at": utcnow() + timedelta(hours=1),
         "token_type": "Bearer",
         "scope": "user-read-private user-read-email streaming",
     }
@@ -111,9 +113,9 @@ def mock_satellite_data() -> Dict[str, Any]:
         "category": "iss",
         "tle_line1": "1 25544U 98067A   21001.00000000  .00001234  00000-0  12345-4 0  9999",
         "tle_line2": "2 25544  51.6400 123.4567   0001234  12.3456  78.9012 15.12345678123456",
-        "tle_epoch": datetime.utcnow(),
+        "tle_epoch": utcnow(),
         "is_active": True,
-        "last_updated": datetime.utcnow(),
+        "last_updated": utcnow(),
     }
 
 
@@ -137,14 +139,14 @@ def mock_session_data(
         "user_profile": mock_user_profile,
         "current_orbital_session": {
             "satellite_id": "iss",
-            "start_time": datetime.utcnow(),
+            "start_time": utcnow(),
             "tle_data": {},
             "playlist": [],
             "played_tracks": set(),
             "region_playlist_index": {},
         },
-        "created_at": datetime.utcnow(),
-        "expires_at": datetime.utcnow() + timedelta(hours=3),
+        "created_at": utcnow(),
+        "expires_at": utcnow() + timedelta(hours=3),
     }
 
 
@@ -161,8 +163,8 @@ def mock_tle_data() -> Dict[str, Any]:
         "name": "ISS (ZARYA)",
         "tle_line1": "1 25544U 98067A   21001.00000000  .00001234  00000-0  12345-4 0  9999",
         "tle_line2": "2 25544  51.6400 123.4567   0001234  12.3456  78.9012 15.12345678123456",
-        "epoch": datetime.utcnow(),
-        "fetch_time": datetime.utcnow(),
+        "epoch": utcnow(),
+        "fetch_time": utcnow(),
     }
 
 
@@ -211,9 +213,9 @@ def mock_cache_data() -> Dict[str, Any]:
         "key2": {"nested": "data"},
         "key3": [1, 2, 3, 4, 5],
         "timestamps": {
-            "key1": datetime.utcnow(),
-            "key2": datetime.utcnow() - timedelta(minutes=30),
-            "key3": datetime.utcnow() - timedelta(hours=1),
+            "key1": utcnow(),
+            "key2": utcnow() - timedelta(minutes=30),
+            "key3": utcnow() - timedelta(hours=1),
         },
     }
 

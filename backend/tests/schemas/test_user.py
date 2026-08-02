@@ -1,6 +1,6 @@
 """Test cases for user Pydantic schemas."""
 
-from datetime import datetime
+from src.config import utcnow
 import pytest
 from pydantic import ValidationError
 
@@ -156,8 +156,8 @@ class TestUserSchemas:
             "display_name": "Test User",
             "email": "test@example.com",
             "country": "US",
-            "created_at": datetime.utcnow(),
-            "last_login": datetime.utcnow(),
+            "created_at": utcnow(),
+            "last_login": utcnow(),
             "is_active": True,
         }
 
@@ -465,8 +465,8 @@ class TestUserSchemaIntegration:
             "display_name": user_create.display_name,
             "email": user_create.email,
             "country": user_create.country,
-            "created_at": datetime.utcnow(),
-            "last_login": datetime.utcnow(),
+            "created_at": utcnow(),
+            "last_login": utcnow(),
             "is_active": True,
         }
 
@@ -488,8 +488,8 @@ class TestUserSchemaIntegration:
             display_name="Test User",
             email="test@example.com",
             country="US",
-            created_at=datetime.utcnow(),
-            last_login=datetime.utcnow(),
+            created_at=utcnow(),
+            last_login=utcnow(),
             is_active=True,
         )
 
@@ -517,8 +517,8 @@ class TestUserSchemaIntegration:
             "display_name": "Test User",
             "email": "test@example.com",
             "country": "US",
-            "created_at": datetime.utcnow(),
-            "last_login": datetime.utcnow(),
+            "created_at": utcnow(),
+            "last_login": utcnow(),
             "is_active": True,
         }
 

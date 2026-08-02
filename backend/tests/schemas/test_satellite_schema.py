@@ -1,6 +1,7 @@
 """Test cases for satellite Pydantic schemas."""
 
-from datetime import datetime, timedelta
+from datetime import timedelta
+from src.config import utcnow
 import pytest
 from pydantic import ValidationError
 
@@ -25,7 +26,7 @@ class TestSatelliteSchemas:
                 "period_minutes": 92.68,
                 "eccentricity": 0.0003456,
             },
-            "last_updated": datetime.utcnow(),
+            "last_updated": utcnow(),
         }
 
         satellite = SatelliteResponse(**satellite_data)
@@ -238,9 +239,9 @@ class TestTLEDataSchema:
             "satellite_id": "iss",
             "tle_line1": "1 25544U 98067A   21001.00000000  .00001234  00000-0  12345-4 0  9990",
             "tle_line2": "2 25544  51.6464 123.4567  0003456 123.4567 234.5678 15.49123456123456",
-            "epoch": datetime.utcnow(),
+            "epoch": utcnow(),
             "is_fresh": True,
-            "last_updated": datetime.utcnow(),
+            "last_updated": utcnow(),
         }
 
         tle = TLEData(**tle_data)
@@ -266,7 +267,7 @@ class TestTLEDataSchema:
             satellite_id="iss",
             tle_line1=valid_tle1,
             tle_line2=valid_tle2,
-            epoch=datetime.utcnow(),
+            epoch=utcnow(),
         )
         assert tle.tle_line1 == valid_tle1
 
@@ -276,7 +277,7 @@ class TestTLEDataSchema:
                 satellite_id="iss",
                 tle_line1="invalid_tle_line",
                 tle_line2=valid_tle2,
-                epoch=datetime.utcnow(),
+                epoch=utcnow(),
             )
 
         # Invalid TLE line 2
@@ -285,7 +286,7 @@ class TestTLEDataSchema:
                 satellite_id="iss",
                 tle_line1=valid_tle1,
                 tle_line2="invalid_tle_line",
-                epoch=datetime.utcnow(),
+                epoch=utcnow(),
             )
 
     def test_tle_data_schema_epoch_validation(self) -> None:
@@ -300,7 +301,7 @@ class TestTLEDataSchema:
         )
 
         # Recent epoch (valid)
-        recent_epoch = datetime.utcnow() - timedelta(hours=1)
+        recent_epoch = utcnow() - timedelta(hours=1)
         tle = TLEData(
             satellite_id="iss",
             tle_line1=valid_tle1,
@@ -315,7 +316,7 @@ class TestTLEDataSchema:
                 satellite_id="iss",
                 tle_line1=valid_tle1,
                 tle_line2=valid_tle2,
-                epoch=datetime.utcnow() - timedelta(days=365),
+                epoch=utcnow() - timedelta(days=365),
             )
 
         # Future epoch (should be rejected)
@@ -324,7 +325,7 @@ class TestTLEDataSchema:
                 satellite_id="iss",
                 tle_line1=valid_tle1,
                 tle_line2=valid_tle2,
-                epoch=datetime.utcnow() + timedelta(days=30),
+                epoch=utcnow() + timedelta(days=30),
             )
 
     def test_tle_data_schema_freshness_calculation(self) -> None:
@@ -343,8 +344,8 @@ class TestTLEDataSchema:
             satellite_id="iss",
             tle_line1=valid_tle1,
             tle_line2=valid_tle2,
-            epoch=datetime.utcnow() - timedelta(hours=1),
-            last_updated=datetime.utcnow() - timedelta(hours=1),
+            epoch=utcnow() - timedelta(hours=1),
+            last_updated=utcnow() - timedelta(hours=1),
         )
 
         # Should compute freshness if method exists
@@ -356,8 +357,8 @@ class TestTLEDataSchema:
             satellite_id="iss",
             tle_line1=valid_tle1,
             tle_line2=valid_tle2,
-            epoch=datetime.utcnow() - timedelta(hours=25),
-            last_updated=datetime.utcnow() - timedelta(hours=25),
+            epoch=utcnow() - timedelta(hours=25),
+            last_updated=utcnow() - timedelta(hours=25),
         )
 
         if hasattr(stale_tle, "compute_freshness"):
@@ -373,7 +374,7 @@ class TestSatellitePositionSchema:
 
         position_data = {
             "satellite_id": "iss",
-            "timestamp": datetime.utcnow(),
+            "timestamp": utcnow(),
             "latitude": 40.7128,
             "longitude": -74.0060,
             "altitude_km": 408.5,
@@ -401,7 +402,7 @@ class TestSatellitePositionSchema:
         # Valid coordinates
         valid_position = SatellitePosition(
             satellite_id="iss",
-            timestamp=datetime.utcnow(),
+            timestamp=utcnow(),
             latitude=45.0,
             longitude=-90.0,
             altitude_km=400.0,
@@ -413,7 +414,7 @@ class TestSatellitePositionSchema:
         with pytest.raises(ValidationError):
             SatellitePosition(
                 satellite_id="iss",
-                timestamp=datetime.utcnow(),
+                timestamp=utcnow(),
                 latitude=95.0,  # > 90
                 longitude=-90.0,
                 altitude_km=400.0,
@@ -423,7 +424,7 @@ class TestSatellitePositionSchema:
         with pytest.raises(ValidationError):
             SatellitePosition(
                 satellite_id="iss",
-                timestamp=datetime.utcnow(),
+                timestamp=utcnow(),
                 latitude=45.0,
                 longitude=185.0,  # > 180
                 altitude_km=400.0,
@@ -433,7 +434,7 @@ class TestSatellitePositionSchema:
         with pytest.raises(ValidationError):
             SatellitePosition(
                 satellite_id="iss",
-                timestamp=datetime.utcnow(),
+                timestamp=utcnow(),
                 latitude=45.0,
                 longitude=-90.0,
                 altitude_km=-100.0,  # Negative
@@ -446,7 +447,7 @@ class TestSatellitePositionSchema:
         # Valid velocity
         valid_position = SatellitePosition(
             satellite_id="iss",
-            timestamp=datetime.utcnow(),
+            timestamp=utcnow(),
             latitude=45.0,
             longitude=-90.0,
             altitude_km=400.0,
@@ -458,7 +459,7 @@ class TestSatellitePositionSchema:
         with pytest.raises(ValidationError):
             SatellitePosition(
                 satellite_id="iss",
-                timestamp=datetime.utcnow(),
+                timestamp=utcnow(),
                 latitude=45.0,
                 longitude=-90.0,
                 altitude_km=400.0,
@@ -478,7 +479,7 @@ class TestVisibilityInfoSchema:
             "elevation_deg": 45.0,
             "azimuth_deg": 180.0,
             "range_km": 800.0,
-            "next_pass": datetime.utcnow() + timedelta(hours=2),
+            "next_pass": utcnow() + timedelta(hours=2),
             "pass_duration_seconds": 360,
         }
 
@@ -570,7 +571,7 @@ class TestSatelliteSchemaIntegration:
 
         position = SatellitePosition(
             satellite_id="iss",
-            timestamp=datetime.utcnow(),
+            timestamp=utcnow(),
             latitude=40.7128,
             longitude=-74.0060,
             altitude_km=408.5,
@@ -602,7 +603,7 @@ class TestSatelliteSchemaIntegration:
             category="iss",
             is_active=True,
             orbit_info=orbit_info,
-            last_updated=datetime.utcnow(),
+            last_updated=utcnow(),
         )
 
         # Should serialize to JSON

@@ -7,8 +7,9 @@ and session cleanup with proper mocking of external dependencies.
 
 import pytest
 from unittest.mock import Mock, patch
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Dict, Any
+from src.config import utcnow
 from fastapi.testclient import TestClient
 from fastapi import status
 
@@ -44,7 +45,7 @@ class TestSessionEndpoints:
         return {
             "satellite_id": "iss",
             "duration_minutes": 90,
-            "start_time": datetime.utcnow().isoformat(),
+            "start_time": utcnow().isoformat(),
         }
 
     @pytest.fixture
@@ -99,7 +100,7 @@ class TestSessionEndpoints:
         session_id = "expired_session_123"
         expired_session = {
             "session_id": session_id,
-            "expires_at": datetime.utcnow() - timedelta(hours=1),  # Expired 1 hour ago
+            "expires_at": utcnow() - timedelta(hours=1),  # Expired 1 hour ago
         }
 
         with patch("src.services.session_service.SessionService") as mock_service:
@@ -138,7 +139,7 @@ class TestSessionEndpoints:
         orbital_session_data = mock_session_response.copy()
         orbital_session_data["current_orbital_session"] = {
             "satellite_id": "iss",
-            "start_time": datetime.utcnow().isoformat(),
+            "start_time": utcnow().isoformat(),
             "duration_minutes": 90,
             "tle_data": {"norad_id": 25544, "name": "ISS"},
             "playlist": [],
@@ -227,7 +228,7 @@ class TestSessionEndpoints:
         session_with_orbital = mock_session_response.copy()
         session_with_orbital["current_orbital_session"] = {
             "satellite_id": "noaa18",
-            "start_time": datetime.utcnow().isoformat(),
+            "start_time": utcnow().isoformat(),
             "is_active": True,
         }
 
@@ -335,9 +336,9 @@ class TestSessionEndpoints:
         # Mock updated session with extended expiration
         updated_session = mock_session_response.copy()
         updated_session["expires_at"] = (
-            datetime.utcnow() + timedelta(hours=3)
+            utcnow() + timedelta(hours=3)
         ).isoformat()
-        updated_session["last_activity"] = datetime.utcnow().isoformat()
+        updated_session["last_activity"] = utcnow().isoformat()
 
         with patch("src.services.session_service.SessionService") as mock_service:
             mock_service.return_value.get_session.return_value = mock_session_response
@@ -389,7 +390,7 @@ class TestSessionEndpoints:
             "satellites_tracked": ["iss"],
             "orbital_sessions_count": 1,
             "session_duration_minutes": 180,
-            "last_activity": datetime.utcnow().isoformat(),
+            "last_activity": utcnow().isoformat(),
         }
 
         with patch("src.services.session_service.SessionService") as mock_service:
@@ -459,7 +460,7 @@ class TestSessionEndpoints:
             "total_sessions_today": 156,
             "orbital_sessions_active": 12,
             "average_session_duration_minutes": 95,
-            "last_updated": datetime.utcnow().isoformat(),
+            "last_updated": utcnow().isoformat(),
         }
 
         with patch("src.services.session_service.SessionService") as mock_service:
@@ -555,7 +556,7 @@ class TestSessionEndpoints:
             "expired_sessions_removed": 10,
             "orphaned_orbital_sessions_cleaned": 3,
             "large_played_sets_optimized": 2,
-            "cleanup_completed_at": datetime.utcnow().isoformat(),
+            "cleanup_completed_at": utcnow().isoformat(),
         }
 
         with patch("src.services.session_service.SessionService") as mock_service:
@@ -581,7 +582,7 @@ class TestSessionEndpoints:
             "session_id": session_id,
             "played_tracks": set(f"track_{i}" for i in range(1000)),  # Large set
             "orbital_history": [
-                {"timestamp": datetime.utcnow(), "position": f"pos_{i}"}
+                {"timestamp": utcnow(), "position": f"pos_{i}"}
                 for i in range(500)
             ],
         }
@@ -620,24 +621,24 @@ class TestSessionEndpoints:
             "listening_history": [
                 {
                     "track_id": "track_1",
-                    "played_at": datetime.utcnow().isoformat(),
+                    "played_at": utcnow().isoformat(),
                     "region": "US",
                 },
                 {
                     "track_id": "track_2",
-                    "played_at": datetime.utcnow().isoformat(),
+                    "played_at": utcnow().isoformat(),
                     "region": "GB",
                 },
             ],
             "orbital_path_history": [
                 {
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": utcnow().isoformat(),
                     "latitude": 40.7,
                     "longitude": -74.0,
                     "region": "US",
                 },
                 {
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": utcnow().isoformat(),
                     "latitude": 51.5,
                     "longitude": -0.1,
                     "region": "GB",
@@ -648,7 +649,7 @@ class TestSessionEndpoints:
                 "total_time_minutes": 120,
                 "regions_visited": 8,
             },
-            "exported_at": datetime.utcnow().isoformat(),
+            "exported_at": utcnow().isoformat(),
         }
 
         with patch("src.services.session_service.SessionService") as mock_service:

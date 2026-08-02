@@ -4,6 +4,8 @@ from unittest.mock import patch
 from datetime import datetime, timedelta
 import pytest
 
+from src.config import utcnow
+
 
 class TestSatelliteModel:
     """Test Satellite database model."""
@@ -19,9 +21,9 @@ class TestSatelliteModel:
             "category": "iss",
             "tle_line1": "1 25544U 98067A   21001.00000000  .00001234  00000-0  12345-4 0  9990",
             "tle_line2": "2 25544  51.6464 123.4567  0003456 123.4567 234.5678 15.49123456123456",
-            "tle_epoch": datetime.utcnow(),
+            "tle_epoch": utcnow(),
             "is_active": True,
-            "last_updated": datetime.utcnow(),
+            "last_updated": utcnow(),
         }
 
         satellite = Satellite(**satellite_data)
@@ -45,9 +47,9 @@ class TestSatelliteModel:
                 category=category,
                 tle_line1="valid_tle_line1",
                 tle_line2="valid_tle_line2",
-                tle_epoch=datetime.utcnow(),
+                tle_epoch=utcnow(),
                 is_active=True,
-                last_updated=datetime.utcnow(),
+                last_updated=utcnow(),
             )
             assert satellite.category == category
 
@@ -59,9 +61,9 @@ class TestSatelliteModel:
                 category="invalid_category",
                 tle_line1="valid_tle_line1",
                 tle_line2="valid_tle_line2",
-                tle_epoch=datetime.utcnow(),
+                tle_epoch=utcnow(),
                 is_active=True,
-                last_updated=datetime.utcnow(),
+                last_updated=utcnow(),
             )
 
     def test_satellite_tle_validation(self) -> None:
@@ -82,9 +84,9 @@ class TestSatelliteModel:
             category="iss",
             tle_line1=valid_tle1,
             tle_line2=valid_tle2,
-            tle_epoch=datetime.utcnow(),
+            tle_epoch=utcnow(),
             is_active=True,
-            last_updated=datetime.utcnow(),
+            last_updated=utcnow(),
         )
 
         assert satellite.tle_line1 == valid_tle1
@@ -106,9 +108,9 @@ class TestSatelliteModel:
                     category="iss",
                     tle_line1=invalid_tle,
                     tle_line2=valid_tle2,
-                    tle_epoch=datetime.utcnow(),
+                    tle_epoch=utcnow(),
                     is_active=True,
-                    last_updated=datetime.utcnow(),
+                    last_updated=utcnow(),
                 )
 
     def test_satellite_norad_id_validation(self) -> None:
@@ -125,9 +127,9 @@ class TestSatelliteModel:
                 category="iss",
                 tle_line1="1 25544U 98067A   21001.00000000  .00001234  00000-0  12345-4 0  9990",
                 tle_line2="2 25544  51.6464 123.4567  0003456 123.4567 234.5678 15.49123456123456",
-                tle_epoch=datetime.utcnow(),
+                tle_epoch=utcnow(),
                 is_active=True,
-                last_updated=datetime.utcnow(),
+                last_updated=utcnow(),
             )
             assert satellite.norad_id == norad_id
 
@@ -142,9 +144,9 @@ class TestSatelliteModel:
                     category="iss",
                     tle_line1="valid_tle1",
                     tle_line2="valid_tle2",
-                    tle_epoch=datetime.utcnow(),
+                    tle_epoch=utcnow(),
                     is_active=True,
-                    last_updated=datetime.utcnow(),
+                    last_updated=utcnow(),
                 )
 
     def test_satellite_name_validation(self) -> None:
@@ -167,9 +169,9 @@ class TestSatelliteModel:
                 category="iss",
                 tle_line1="valid_tle1",
                 tle_line2="valid_tle2",
-                tle_epoch=datetime.utcnow(),
+                tle_epoch=utcnow(),
                 is_active=True,
-                last_updated=datetime.utcnow(),
+                last_updated=utcnow(),
             )
             assert satellite.name == name
 
@@ -189,9 +191,9 @@ class TestSatelliteModel:
                     category="iss",
                     tle_line1="valid_tle1",
                     tle_line2="valid_tle2",
-                    tle_epoch=datetime.utcnow(),
+                    tle_epoch=utcnow(),
                     is_active=True,
-                    last_updated=datetime.utcnow(),
+                    last_updated=utcnow(),
                 )
 
     def test_satellite_string_representation(self) -> None:
@@ -204,9 +206,9 @@ class TestSatelliteModel:
             category="iss",
             tle_line1="valid_tle1",
             tle_line2="valid_tle2",
-            tle_epoch=datetime.utcnow(),
+            tle_epoch=utcnow(),
             is_active=True,
-            last_updated=datetime.utcnow(),
+            last_updated=utcnow(),
         )
 
         str_repr = str(satellite)
@@ -217,7 +219,7 @@ class TestSatelliteModel:
         """Should convert to dictionary format."""
         from src.models.satellite import Satellite
 
-        now = datetime.utcnow()
+        now = utcnow()
         satellite = Satellite(
             name="International Space Station",
             norad_id=25544,
@@ -252,9 +254,9 @@ class TestSatelliteDatabaseOperations:
                 "category": "weather",
                 "tle_line1": "valid_tle1",
                 "tle_line2": "valid_tle2",
-                "tle_epoch": datetime.utcnow(),
+                "tle_epoch": utcnow(),
                 "is_active": True,
-                "last_updated": datetime.utcnow(),
+                "last_updated": utcnow(),
             }
 
             satellite = Satellite(**satellite_data)
@@ -278,9 +280,9 @@ class TestSatelliteDatabaseOperations:
                 category="weather",
                 tle_line1="updated_tle1",
                 tle_line2="updated_tle2",
-                tle_epoch=datetime.utcnow(),
+                    tle_epoch=utcnow(),
                 is_active=False,
-                last_updated=datetime.utcnow(),
+                    last_updated=utcnow(),
             )
 
             satellite.save()
@@ -303,9 +305,9 @@ class TestSatelliteDatabaseOperations:
                 category="weather",
                 tle_line1="tle1",
                 tle_line2="tle2",
-                tle_epoch=datetime.utcnow(),
+                tle_epoch=utcnow(),
                 is_active=True,
-                last_updated=datetime.utcnow(),
+                last_updated=utcnow(),
             )
 
             satellite.delete()
@@ -327,9 +329,9 @@ class TestSatelliteDatabaseOperations:
             "category": "iss",
             "tle_line1": "tle1",
             "tle_line2": "tle2",
-            "tle_epoch": datetime.utcnow(),
+            "tle_epoch": utcnow(),
             "is_active": True,
-            "last_updated": datetime.utcnow(),
+            "last_updated": utcnow(),
         }
 
         with patch(
@@ -355,9 +357,9 @@ class TestSatelliteDatabaseOperations:
             "category": "iss",
             "tle_line1": "tle1",
             "tle_line2": "tle2",
-            "tle_epoch": datetime.utcnow(),
+            "tle_epoch": utcnow(),
             "is_active": True,
-            "last_updated": datetime.utcnow(),
+            "last_updated": utcnow(),
         }
 
         with patch(
@@ -383,9 +385,9 @@ class TestSatelliteDatabaseOperations:
                 "category": "weather",
                 "tle_line1": "tle1",
                 "tle_line2": "tle2",
-                "tle_epoch": datetime.utcnow(),
+                "tle_epoch": utcnow(),
                 "is_active": True,
-                "last_updated": datetime.utcnow(),
+                "last_updated": utcnow(),
             },
             {
                 "id": 2,
@@ -394,9 +396,9 @@ class TestSatelliteDatabaseOperations:
                 "category": "weather",
                 "tle_line1": "tle1",
                 "tle_line2": "tle2",
-                "tle_epoch": datetime.utcnow(),
+                "tle_epoch": utcnow(),
                 "is_active": True,
-                "last_updated": datetime.utcnow(),
+                "last_updated": utcnow(),
             },
         ]
 
@@ -424,9 +426,9 @@ class TestSatelliteDatabaseOperations:
                 "category": "iss",
                 "tle_line1": "tle1",
                 "tle_line2": "tle2",
-                "tle_epoch": datetime.utcnow(),
+                "tle_epoch": utcnow(),
                 "is_active": True,
-                "last_updated": datetime.utcnow(),
+                "last_updated": utcnow(),
             }
         ]
 
@@ -458,15 +460,15 @@ class TestSatelliteTLEManagement:
             category="iss",
             tle_line1="old_tle1",
             tle_line2="old_tle2",
-            tle_epoch=datetime.utcnow() - timedelta(days=1),
+            tle_epoch=utcnow() - timedelta(days=1),
             is_active=True,
-            last_updated=datetime.utcnow() - timedelta(days=1),
+            last_updated=utcnow() - timedelta(days=1),
         )
 
         new_tle_data = {
             "tle_line1": "new_tle1",
             "tle_line2": "new_tle2",
-            "tle_epoch": datetime.utcnow(),
+            "tle_epoch": utcnow(),
         }
 
         with patch.object(satellite, "save") as mock_save:
@@ -490,9 +492,9 @@ class TestSatelliteTLEManagement:
             category="iss",
             tle_line1="tle1",
             tle_line2="tle2",
-            tle_epoch=datetime.utcnow() - timedelta(hours=1),
+            tle_epoch=utcnow() - timedelta(hours=1),
             is_active=True,
-            last_updated=datetime.utcnow() - timedelta(hours=1),
+            last_updated=utcnow() - timedelta(hours=1),
         )
 
         assert fresh_satellite.is_tle_data_fresh(max_age_hours=6) is True
@@ -504,9 +506,9 @@ class TestSatelliteTLEManagement:
             category="iss",
             tle_line1="tle1",
             tle_line2="tle2",
-            tle_epoch=datetime.utcnow() - timedelta(hours=25),
+            tle_epoch=utcnow() - timedelta(hours=25),
             is_active=True,
-            last_updated=datetime.utcnow() - timedelta(hours=25),
+            last_updated=utcnow() - timedelta(hours=25),
         )
 
         assert stale_satellite.is_tle_data_fresh(max_age_hours=6) is False
@@ -516,7 +518,7 @@ class TestSatelliteTLEManagement:
         from src.models.satellite import Satellite
 
         # Valid epoch (recent)
-        valid_epoch = datetime.utcnow() - timedelta(days=1)
+        valid_epoch = utcnow() - timedelta(days=1)
         satellite = Satellite(
             name="Test",
             norad_id=25544,
@@ -525,7 +527,7 @@ class TestSatelliteTLEManagement:
             tle_line2="tle2",
             tle_epoch=valid_epoch,
             is_active=True,
-            last_updated=datetime.utcnow(),
+            last_updated=utcnow(),
         )
         assert satellite.tle_epoch == valid_epoch
 
@@ -537,9 +539,9 @@ class TestSatelliteTLEManagement:
                 category="iss",
                 tle_line1="tle1",
                 tle_line2="tle2",
-                tle_epoch=datetime.utcnow() - timedelta(days=365),  # Too old
+                tle_epoch=utcnow() - timedelta(days=365),  # Too old
                 is_active=True,
-                last_updated=datetime.utcnow(),
+                last_updated=utcnow(),
             )
 
         # Invalid epoch (future)
@@ -550,9 +552,9 @@ class TestSatelliteTLEManagement:
                 category="iss",
                 tle_line1="tle1",
                 tle_line2="tle2",
-                tle_epoch=datetime.utcnow() + timedelta(days=30),  # Future
+                tle_epoch=utcnow() + timedelta(days=30),  # Future
                 is_active=True,
-                last_updated=datetime.utcnow(),
+                last_updated=utcnow(),
             )
 
 
@@ -570,9 +572,9 @@ class TestSatelliteUtilityMethods:
             category="iss",
             tle_line1="tle1",
             tle_line2="tle2",
-            tle_epoch=datetime.utcnow(),
+                tle_epoch=utcnow(),
             is_active=True,
-            last_updated=datetime.utcnow(),
+                last_updated=utcnow(),
         )
 
         satellite2 = Satellite(
@@ -582,9 +584,9 @@ class TestSatelliteUtilityMethods:
             category="iss",
             tle_line1="tle1",
             tle_line2="tle2",
-            tle_epoch=datetime.utcnow(),
+                tle_epoch=utcnow(),
             is_active=True,
-            last_updated=datetime.utcnow(),
+                last_updated=utcnow(),
         )
 
         satellite3 = Satellite(
@@ -594,9 +596,9 @@ class TestSatelliteUtilityMethods:
             category="weather",
             tle_line1="tle1",
             tle_line2="tle2",
-            tle_epoch=datetime.utcnow(),
+                    tle_epoch=utcnow(),
             is_active=True,
-            last_updated=datetime.utcnow(),
+                    last_updated=utcnow(),
         )
 
         assert satellite1 == satellite2  # Same ID
@@ -613,9 +615,9 @@ class TestSatelliteUtilityMethods:
             category="iss",
             tle_line1="tle1",
             tle_line2="tle2",
-            tle_epoch=datetime.utcnow(),
+            tle_epoch=utcnow(),
             is_active=True,
-            last_updated=datetime.utcnow(),
+            last_updated=utcnow(),
         )
 
         # Should be hashable for use in sets/dicts
@@ -629,7 +631,7 @@ class TestSatelliteUtilityMethods:
         """Should serialize to JSON compatible format."""
         from src.models.satellite import Satellite
 
-        now = datetime.utcnow()
+        now = utcnow()
         satellite = Satellite(
             id=1,
             name="Test Satellite",
