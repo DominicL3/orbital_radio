@@ -633,7 +633,6 @@ class TestPlaylistSchemaIntegration:
             Artist,
             Album,
             Position,
-            RegionInfo,
         )
 
         # Create artist

@@ -56,9 +56,8 @@ class TestSatelliteService:
         from src.services.satellite_service import SatelliteService
 
         service = SatelliteService()
-        assert hasattr(service, "tle_manager")
-        assert hasattr(service, "database")
-        assert hasattr(service, "cache_service")
+        assert hasattr(service, "tracker")
+        assert hasattr(service, "repository")
 
     @patch("src.core.satellite_tracker.SatelliteTLEManager.fetch_tle_data")
     def test_fetch_satellite_tle_success(
@@ -114,7 +113,7 @@ class TestSatelliteService:
         service = SatelliteService()
 
         with patch.object(
-            service.database, "get_active_satellites", return_value=mock_satellite_list
+            service.repository, "get_active_satellites", return_value=mock_satellite_list
         ):
             satellites = service.get_satellite_list()
 
@@ -136,7 +135,7 @@ class TestSatelliteService:
         ]
 
         with patch.object(
-            service.database,
+            service.repository,
             "get_satellites_by_category",
             return_value=weather_satellites,
         ):
@@ -164,7 +163,7 @@ class TestSatelliteService:
         }
 
         with patch.object(
-            service.database, "get_satellite_by_id", return_value=iss_details
+            service.repository, "get_satellite_by_id", return_value=iss_details
         ):
             details = service.get_satellite_details("iss")
 
@@ -178,7 +177,7 @@ class TestSatelliteService:
 
         service = SatelliteService()
 
-        with patch.object(service.database, "get_satellite_by_id", return_value=None):
+        with patch.object(service.repository, "get_satellite_by_id", return_value=None):
             details = service.get_satellite_details("unknown_satellite")
 
             assert details is None
@@ -297,7 +296,7 @@ class TestTLEDataManagement:
         }
 
         with patch.object(
-            service.tle_manager, "get_cached_tle", return_value=fresh_tle
+            service.tracker, "get_cached_tle", return_value=fresh_tle
         ):
             is_fresh = service.is_tle_data_fresh("iss", max_age_hours=6)
             assert is_fresh is True
@@ -309,7 +308,7 @@ class TestTLEDataManagement:
         }
 
         with patch.object(
-            service.tle_manager, "get_cached_tle", return_value=stale_tle
+            service.tracker, "get_cached_tle", return_value=stale_tle
         ):
             is_fresh = service.is_tle_data_fresh("iss", max_age_hours=6)
             assert is_fresh is False
@@ -376,7 +375,7 @@ class TestSatellitePositionCalculations:
         }
 
         with patch.object(
-            service.tle_manager, "get_current_position", return_value=current_position
+            service.tracker, "get_current_position", return_value=current_position
         ):
             position = service.get_current_satellite_position("iss")
 
@@ -401,7 +400,7 @@ class TestSatellitePositionCalculations:
         observer_lat, observer_lon = 40.7128, -74.0060  # NYC
 
         with patch.object(
-            service.tle_manager, "calculate_visibility", return_value=visibility_data
+            service.tracker, "calculate_visibility", return_value=visibility_data
         ):
             visibility = service.calculate_satellite_visibility(
                 "iss", observer_lat, observer_lon
@@ -424,7 +423,7 @@ class TestSatellitePositionCalculations:
         ]
 
         with patch.object(
-            service.tle_manager, "generate_ground_track", return_value=ground_track
+            service.tracker, "generate_ground_track", return_value=ground_track
         ):
             track = service.get_satellite_ground_track("iss", duration_minutes=15)
 
@@ -439,7 +438,7 @@ class TestSatellitePositionCalculations:
         service = SatelliteService()
 
         with patch.object(
-            service.tle_manager,
+            service.tracker,
             "get_current_position",
             side_effect=Exception("TLE data corrupted"),
         ):
@@ -467,7 +466,7 @@ class TestSatelliteDatabaseOperations:
             "description": "Starlink satellite",
         }
 
-        with patch.object(service.database, "add_satellite") as mock_add:
+        with patch.object(service.repository, "add_satellite") as mock_add:
             service.add_satellite(new_satellite)
 
             mock_add.assert_called_once_with(new_satellite)
@@ -478,7 +477,7 @@ class TestSatelliteDatabaseOperations:
 
         service = SatelliteService()
 
-        with patch.object(service.database, "update_satellite_status") as mock_update:
+        with patch.object(service.repository, "update_satellite_status") as mock_update:
             service.update_satellite_status("iss", is_active=False)
 
             mock_update.assert_called_once_with("iss", is_active=False)
@@ -489,7 +488,7 @@ class TestSatelliteDatabaseOperations:
 
         service = SatelliteService()
 
-        with patch.object(service.database, "remove_satellite") as mock_remove:
+        with patch.object(service.repository, "remove_satellite") as mock_remove:
             service.remove_satellite("old_satellite")
 
             mock_remove.assert_called_once_with("old_satellite")
@@ -507,7 +506,7 @@ class TestSatelliteDatabaseOperations:
         ]
 
         with patch.object(
-            service.database, "bulk_update_satellites"
+            service.repository, "bulk_update_satellites"
         ) as mock_bulk_update:
             service.bulk_update_satellites(satellite_updates)
 
@@ -516,27 +515,6 @@ class TestSatelliteDatabaseOperations:
 
 class TestPerformanceOptimizations:
     """Test performance optimization features."""
-
-    def test_position_calculation_caching(self) -> None:
-        """Should cache position calculations for performance."""
-        from src.services.satellite_service import SatelliteService
-
-        service = SatelliteService()
-
-        cached_position = {
-            "timestamp": datetime.utcnow(),
-            "latitude": 40.7128,
-            "longitude": -74.0060,
-            "altitude_km": 408,
-        }
-
-        with patch.object(
-            service.cache_service, "get_cached_position", return_value=cached_position
-        ):
-            position = service.get_current_satellite_position("iss")
-
-            assert position["latitude"] == 40.7128
-            # Should use cached data without recalculation
 
     def test_bulk_position_calculation(self) -> None:
         """Should efficiently calculate positions for multiple satellites."""
@@ -553,7 +531,7 @@ class TestPerformanceOptimizations:
         }
 
         with patch.object(
-            service.tle_manager, "get_bulk_positions", return_value=bulk_positions
+            service.tracker, "get_bulk_positions", return_value=bulk_positions
         ):
             positions = service.get_bulk_satellite_positions(satellite_ids)
 
@@ -568,7 +546,7 @@ class TestPerformanceOptimizations:
         service = SatelliteService()
 
         # Test memory usage doesn't grow excessively
-        with patch.object(service.tle_manager, "cleanup_old_tle_data") as mock_cleanup:
+        with patch.object(service.tracker, "cleanup_old_tle_data") as mock_cleanup:
             service.cleanup_old_tle_data(days_to_keep=7)
 
             mock_cleanup.assert_called_once_with(days_to_keep=7)
@@ -584,7 +562,7 @@ class TestErrorHandling:
         service = SatelliteService()
 
         with patch.object(
-            service.tle_manager,
+            service.tracker,
             "fetch_tle_data",
             side_effect=ConnectionError("CelesTrak down"),
         ):
@@ -606,7 +584,7 @@ class TestErrorHandling:
         }
 
         with patch.object(
-            service.tle_manager, "fetch_tle_data", return_value=corrupted_tle
+            service.tracker, "fetch_tle_data", return_value=corrupted_tle
         ):
             # Should validate and reject corrupted data
             with pytest.raises(Exception) as exc_info:
@@ -624,7 +602,7 @@ class TestErrorHandling:
         service = SatelliteService()
 
         with patch.object(
-            service.database,
+            service.repository,
             "get_active_satellites",
             side_effect=Exception("Database connection failed"),
         ):

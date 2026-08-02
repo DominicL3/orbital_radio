@@ -539,7 +539,7 @@ class TestSatelliteSchemaIntegration:
 
     def test_satellite_with_orbit_and_tle(self) -> None:
         """Should integrate satellite response with orbit info and TLE data."""
-        from src.schemas.satellite import SatelliteResponse, OrbitInfo, TLEData
+        from src.schemas.satellite import SatelliteResponse, OrbitInfo
 
         orbit_info = OrbitInfo(
             altitude_km=408,
@@ -585,8 +585,6 @@ class TestSatelliteSchemaIntegration:
         from src.schemas.satellite import (
             SatelliteResponse,
             OrbitInfo,
-            TLEData,
-            SatellitePosition,
         )
 
         # Create complex satellite data

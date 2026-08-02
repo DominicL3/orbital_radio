@@ -6,7 +6,7 @@ and error handling with proper mocking of external dependencies.
 """
 
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 from datetime import datetime, timedelta
 from typing import Dict, List, Any
 from fastapi.testclient import TestClient
@@ -22,12 +22,8 @@ class TestSatelliteEndpoints:
     @pytest.fixture
     def client(self) -> TestClient:
         """Create FastAPI test client."""
-        # This would import the actual FastAPI app
-        # from src.main import app
-        # return TestClient(app)
-        # For now, we'll mock it
-        mock_app = Mock()
-        return TestClient(mock_app)
+        from src.main import app
+        return TestClient(app)
 
     @pytest.fixture
     def mock_satellite_list(
@@ -566,29 +562,31 @@ class TestSatelliteEndpoints:
 
         results = []
 
-        def make_request():
-            try:
-                with patch(
-                    "src.services.satellite_service.SatelliteService"
-                ) as mock_service:
-                    mock_service.return_value.get_all_satellites.return_value = (
-                        mock_satellite_list
-                    )
+        # Patch once before threads start (patch() is not thread-safe,
+        # so applying it inside worker threads leaks the mock).
+        with patch(
+            "src.services.satellite_service.SatelliteService"
+        ) as mock_service:
+            mock_service.return_value.get_all_satellites.return_value = (
+                mock_satellite_list
+            )
 
+            def make_request():
+                try:
                     response = client.get("/satellites")
                     results.append(response.status_code == status.HTTP_200_OK)
-            except Exception:
-                results.append(False)
+                except Exception:
+                    results.append(False)
 
-        # Act - create multiple concurrent requests
-        threads = []
-        for _ in range(10):
-            thread = threading.Thread(target=make_request)
-            threads.append(thread)
-            thread.start()
+            # Act - create multiple concurrent requests
+            threads = []
+            for _ in range(10):
+                thread = threading.Thread(target=make_request)
+                threads.append(thread)
+                thread.start()
 
-        for thread in threads:
-            thread.join()
+            for thread in threads:
+                thread.join()
 
         # Assert - all requests should succeed
         assert len(results) == 10

@@ -498,7 +498,7 @@ class TestMemoryManagement:
             "created_at": datetime.utcnow(),
             "expires_at": datetime.utcnow() + timedelta(hours=3),
         }
-        new_session_id = cache_service.create_session(new_session_data)
+        cache_service.create_session(new_session_data)
 
         # First session should still exist (was recently accessed)
         assert cache_service.get_session(session_ids[0]) is not None
