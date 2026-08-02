@@ -602,18 +602,6 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 - Python 3.13+
 - uv package manager
 
-### Installing uv
-```bash
-# macOS and Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Windows
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-
-# Alternative: Install via pip
-pip install uv
-```
-
 ### Project Setup
 ```bash
 # Clone the repository
@@ -628,10 +616,13 @@ source .venv/bin/activate  # macOS/Linux
 .venv\Scripts\activate     # Windows
 
 # Run the development server
-uv run uvicorn app.main:app --reload
+uv run uvicorn src.main:app --reload
 
 # Run tests
 uv run pytest
+
+# Run linter
+uv run ruff check .
 
 # Add a new dependency
 uv add <package-name>
@@ -639,14 +630,3 @@ uv add <package-name>
 # Add a development dependency
 uv add --dev <package-name>
 ```
-
-### uv vs Poetry Comparison
-- **Faster**: uv is written in Rust and is 10-100x faster than Poetry
-- **Simpler**: Single tool that replaces pip, pip-tools, poetry, pyenv, and virtualenv
-- **Compatible**: Uses standard `pyproject.toml` format
-- **Lockfile**: Uses `uv.lock` for reproducible installs (similar to `poetry.lock`)
-- **Commands**:
-  - `uv add` → `poetry add`
-  - `uv sync` → `poetry install`
-  - `uv run` → `poetry run`
-  - `uv remove` → `poetry remove`
