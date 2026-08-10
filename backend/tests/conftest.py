@@ -5,6 +5,7 @@ This module provides common fixtures and test configuration for all test modules
 in the Orbital Radio backend test suite.
 """
 
+import os
 import pytest
 import tempfile
 import sqlite3
@@ -13,6 +14,11 @@ from pathlib import Path
 from typing import Dict, Any, Generator
 
 from src.config import utcnow
+
+
+os.environ.setdefault("SPOTIFY_CLIENT_ID", "test-client-id-not-a-credential")
+os.environ.setdefault("SPOTIFY_CLIENT_SECRET", "test-client-secret-not-a-credential")
+os.environ.setdefault("SPOTIFY_REDIRECT_URI", "http://localhost:8000/test-callback")
 
 
 # Mock database connection for testing
