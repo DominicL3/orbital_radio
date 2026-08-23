@@ -7,6 +7,8 @@ refreshing TLE data, updating playlist caches, and cleaning up expired sessions.
 import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+from src.config import get_settings
+from src.services.auth_service import session_manager
 from src.services.satellite_service import SatelliteService
 
 logger = logging.getLogger(__name__)
@@ -24,18 +26,31 @@ async def refresh_tle_data_job() -> None:
         logger.error("Error executing refresh_tle_data_job: %s", exc)
 
 
+async def cleanup_auth_sessions_job() -> None:
+    """Remove expired authentication sessions and OAuth states."""
+    session_manager.cleanup_expired()
+
+
 def init_scheduler() -> AsyncIOScheduler:
     """Initialize and configure the background scheduler with periodic jobs.
 
     Returns:
         AsyncIOScheduler: The configured AsyncIOScheduler instance.
     """
-    if not scheduler.get_jobs():
+    if scheduler.get_job("refresh_tle_data") is None:
         scheduler.add_job(
             refresh_tle_data_job,
             "interval",
-            hours=12,
+            hours=get_settings().tle_refresh_hours,
             id="refresh_tle_data",
+            replace_existing=True,
+        )
+    if scheduler.get_job("cleanup_auth_sessions") is None:
+        scheduler.add_job(
+            cleanup_auth_sessions_job,
+            "interval",
+            minutes=30,
+            id="cleanup_auth_sessions",
             replace_existing=True,
         )
     return scheduler

@@ -36,6 +36,19 @@ class SpotifyClient:
             OrderedDict()
         )
 
+    def get_authorization_url(self, state: str) -> str:
+        """Build Spotify's authorization URL for an OAuth state value."""
+        state = self._required(state, "state")
+        return "https://accounts.spotify.com/authorize?" + urlencode(
+            {
+                "client_id": self.client_id,
+                "response_type": "code",
+                "redirect_uri": self.redirect_uri,
+                "scope": "user-read-private",
+                "state": state,
+            }
+        )
+
     @staticmethod
     def _required(value: str, name: str) -> str:
         """Return a non-empty string input."""
