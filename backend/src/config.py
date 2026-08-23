@@ -4,19 +4,9 @@ Centralizes environment variables, application settings, and satellite catalog.
 """
 
 from datetime import datetime, timezone
-from functools import lru_cache
+from os import environ
 from typing import Any, Dict
 
-
-VALID_SATELLITE_CATEGORIES: set[str] = {
-    "iss",
-    "weather",
-    "starlink",
-    "remote_sensing",
-    "navigation",
-    "earth_observation",
-    "communication",
-}
 
 def utcnow() -> datetime:
     """Return a naive datetime representing the current UTC time.
@@ -28,53 +18,93 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-# Hard-coded ISS TLE fixture used as fallback when real TLE data is unavailable.
-ISS_FALLBACK_TLE_LINE1 = "1 25544U 98067A   21001.00000000  .00001234  00000-0  12345-4 0  9990"
-ISS_FALLBACK_TLE_LINE2 = "2 25544  51.6464 123.4567  0003456 123.4567 234.5678 15.49123456123456"
-
-
 class Settings:
-    """Application settings loaded from environment or defaults."""
+    """All application configuration loaded from environment or safe defaults."""
 
     # Application
-    environment: str = "development"
-    log_level: str = "INFO"
-    secret_key: str = "dev-secret-change-in-production"
+    def __init__(self) -> None:
+        """Load application settings from environment variables."""
+        self.environment = environ.get("ENVIRONMENT", "development").strip().lower()
+        self.log_level = environ.get("LOG_LEVEL", "INFO").strip().upper()
+        self.secret_key = environ.get("SECRET_KEY", "dev-secret-change-in-production")
+        if self.environment == "production" and (
+            self.secret_key == "dev-secret-change-in-production"
+            or len(self.secret_key) < 32
+        ):
+            raise ValueError("A strong SECRET_KEY is required in production")
 
-    # Database
-    database_path: str = "./orbital_radio.db"
+        # Database
+        self.database_path = environ.get("DATABASE_PATH", "./orbital_radio.db")
 
-    # Spotify API
-    spotify_client_id: str = ""
-    spotify_client_secret: str = ""
-    spotify_redirect_uri: str = "http://localhost:8000/auth/spotify/callback"
+        # Spotify API
+        self.spotify_client_id = environ.get("SPOTIFY_CLIENT_ID", "").strip()
+        self.spotify_client_secret = environ.get("SPOTIFY_CLIENT_SECRET", "").strip()
+        self.spotify_redirect_uri = environ.get(
+            "SPOTIFY_REDIRECT_URI",
+            "http://localhost:8000/auth/spotify/callback",
+        ).strip()
 
-    # Session Management
-    session_expire_hours: int = 3
-    max_played_tracks_per_session: int = 500
+        # Session Management
+        self.session_expire_hours = int(environ.get("SESSION_EXPIRE_HOURS", "3"))
+        self.oauth_state_minutes = int(environ.get("OAUTH_STATE_MINUTES", "10"))
+        self.max_played_tracks_per_session = int(
+            environ.get("MAX_PLAYED_TRACKS_PER_SESSION", "500")
+        )
 
-    # Playlist Generation
-    country_cooldown_songs: int = 5
-    playlist_cache_max_age_hours: int = 24
-    prefetch_playlists_on_startup: bool = True
+        # Satellite Data & Refresh Timing
+        self.tle_refresh_hours = int(environ.get("TLE_REFRESH_HOURS", "12"))
+        self.tle_stale_hours = int(environ.get("TLE_STALE_HOURS", "12"))
 
-    # Geographic Data
-    country_boundaries_file: str = "./data/country_boundaries.geojson"
+        # Playlist Generation
+        self.country_cooldown_songs = int(environ.get("COUNTRY_COOLDOWN_SONGS", "5"))
+        self.playlist_cache_max_age_hours = int(
+            environ.get("PLAYLIST_CACHE_MAX_AGE_HOURS", "24")
+        )
+        self.prefetch_playlists_on_startup = environ.get(
+            "PREFETCH_PLAYLISTS_ON_STARTUP", "true"
+        ).lower() in {"1", "true", "yes"}
 
-    # Satellite Catalog (MVP: ISS, extensible)
-    satellite_catalog: Dict[str, Dict[str, Any]] = {
-        "iss": {
-            "name": "International Space Station",
-            "norad_id": 25544,
-            "category": "iss",
-            "celestrak_url": "https://celestrak.org/NORAD/elements/stations.txt",
+        # Geographic Data
+        self.country_boundaries_file = environ.get(
+            "COUNTRY_BOUNDARIES_FILE", "./data/country_boundaries.geojson"
+        )
+
+        # Satellite data
+        self.valid_satellite_categories: set[str] = {
+            "iss",
+            "weather",
+            "starlink",
+            "remote_sensing",
+            "navigation",
+            "earth_observation",
+            "communication",
         }
-    }
+        self.iss_fallback_tle_line1 = (
+            "1 25544U 98067A   21001.00000000  .00001234  00000-0  12345-4 0  9990"
+        )
+        self.iss_fallback_tle_line2 = (
+            "2 25544  51.6464 123.4567  0003456 123.4567 234.5678 15.49123456123456"
+        )
+        self.satellite_catalog: Dict[str, Dict[str, Any]] = {
+            "iss": {
+                "name": "International Space Station",
+                "norad_id": 25544,
+                "category": "iss",
+                "celestrak_url": "https://celestrak.org/NORAD/elements/stations.txt",
+            }
+        }
+
+    @property
+    def cors_origins(self) -> list[str]:
+        """Return configured, explicit browser origins."""
+        value = environ.get(
+            "CORS_ORIGINS", "http://localhost:3000,http://localhost:8000"
+        )
+        return [origin.strip() for origin in value.split(",") if origin.strip()]
 
 
-@lru_cache()
 def get_settings() -> Settings:
-    """Get cached global settings instance.
+    """Get the current global settings instance.
 
     Returns:
         Settings: Application configuration settings.

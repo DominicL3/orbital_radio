@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional, Union
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
-from src.config import VALID_SATELLITE_CATEGORIES, utcnow
+from src.config import get_settings, utcnow
 
 
 class OrbitInfo(BaseModel):
@@ -266,7 +266,7 @@ class SatelliteResponse(BaseModel):
         Raises:
             ValueError: If category is invalid.
         """
-        if v not in VALID_SATELLITE_CATEGORIES:
+        if v not in get_settings().valid_satellite_categories:
             raise ValueError(f"Invalid category: {v}")
         return v
 

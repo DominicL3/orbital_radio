@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Generator, Any
 
-from src.config import get_settings, ISS_FALLBACK_TLE_LINE1, ISS_FALLBACK_TLE_LINE2
+from src.config import get_settings
 
 
 def get_db_path() -> str:
@@ -187,8 +187,8 @@ class SatelliteRepository:
                     "norad_id": cat_entry["norad_id"],
                     "category": cat_entry["category"],
                     "is_active": True,
-                    "tle_line1": ISS_FALLBACK_TLE_LINE1,
-                    "tle_line2": ISS_FALLBACK_TLE_LINE2,
+                    "tle_line1": settings.iss_fallback_tle_line1,
+                    "tle_line2": settings.iss_fallback_tle_line2,
                     "last_updated": datetime.now(),
                 }
             result = Database.fetch_one("SELECT * FROM satellites WHERE name = ?", (satellite_id,))

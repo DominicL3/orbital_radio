@@ -1,12 +1,13 @@
 """Small, defensive client for the Spotify Web API."""
 
 from collections import OrderedDict
-from os import environ
 import time
 from typing import Any, Callable
 from urllib.parse import quote, urlencode, urlparse
 
 import requests
+
+from src.config import get_settings
 
 
 class SpotifyClient:
@@ -19,13 +20,11 @@ class SpotifyClient:
 
     def __init__(self) -> None:
         """Load required Spotify configuration from the environment."""
+        settings = get_settings()
         values = {
-            name: environ.get(name, "").strip()
-            for name in (
-                "SPOTIFY_CLIENT_ID",
-                "SPOTIFY_CLIENT_SECRET",
-                "SPOTIFY_REDIRECT_URI",
-            )
+            "SPOTIFY_CLIENT_ID": settings.spotify_client_id,
+            "SPOTIFY_CLIENT_SECRET": settings.spotify_client_secret,
+            "SPOTIFY_REDIRECT_URI": settings.spotify_redirect_uri,
         }
         if not all(values.values()):
             raise ValueError("Spotify configuration is missing")

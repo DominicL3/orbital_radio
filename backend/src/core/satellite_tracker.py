@@ -260,14 +260,15 @@ class SatelliteTLEManager:
         pass
 
     def _is_tle_stale(self, satellite_id: str) -> bool:
-        """Check if TLE data for satellite is missing or older than 12 hours."""
+        """Check if TLE data for satellite is missing or stale according to settings."""
         tle = self.tle_cache.get(satellite_id)
         if not tle:
             return True
         epoch = getattr(tle, "epoch", None)
         if epoch is None or not isinstance(epoch, datetime):
             return True
-        return abs((datetime.now() - epoch).total_seconds()) > 12 * 3600
+        stale_seconds = get_settings().tle_stale_hours * 3600
+        return abs((datetime.now() - epoch).total_seconds()) > stale_seconds
 
     def _parse_tle_data(self, raw_text: str, satellite_id: str) -> Any:
         """Parse raw TLE text response into TLEData schema model."""

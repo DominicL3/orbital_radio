@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import json
 from typing import Optional, Dict, Any, List
 
-from src.config import VALID_SATELLITE_CATEGORIES, utcnow
+from src.config import get_settings, utcnow
 
 
 class Satellite:
@@ -47,7 +47,7 @@ class Satellite:
         if not isinstance(norad_id, int) or norad_id <= 0 or norad_id > 99999:
             raise ValueError("norad_id must be a positive integer between 1 and 99999")
 
-        if category not in VALID_SATELLITE_CATEGORIES:
+        if category not in get_settings().valid_satellite_categories:
             raise ValueError(f"Invalid category: {category}")
 
         invalid_tle_indicators = {"", "invalid_tle", "1 25544U 98067A"}
