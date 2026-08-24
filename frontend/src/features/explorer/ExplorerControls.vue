@@ -20,10 +20,7 @@ const speeds: SimulationState['speed'][] = [1, 10, 60]
   <section class="explorer-controls" aria-label="Simulation controls">
     <div class="control-heading">
       <span class="eyebrow">MISSION CONTROL</span>
-      <span class="control-status" :class="{ 'is-live': props.isPlaying }">
-        <span class="status-dot" aria-hidden="true" />
-        {{ props.isPlaying ? 'RUNNING' : 'PAUSED' }}
-      </span>
+      <span class="target-count">01 TARGET ONLINE</span>
     </div>
 
     <div class="control-row">
@@ -93,30 +90,11 @@ const speeds: SimulationState['speed'][] = [1, 10, 60]
   letter-spacing: 0.2em;
 }
 
-.control-status {
-  align-items: center;
-  color: rgba(190, 218, 242, 0.5);
-  display: inline-flex;
+.target-count {
+  color: #7ff4e9;
   font-size: 9px;
   font-weight: 700;
-  gap: 6px;
   letter-spacing: 0.16em;
-}
-
-.control-status.is-live {
-  color: #7ff4e9;
-}
-
-.status-dot {
-  background: currentColor;
-  border-radius: 50%;
-  display: inline-block;
-  height: 5px;
-  width: 5px;
-}
-
-.control-status.is-live .status-dot {
-  box-shadow: 0 0 9px currentColor;
 }
 
 .control-row {

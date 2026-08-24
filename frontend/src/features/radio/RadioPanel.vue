@@ -69,8 +69,6 @@ const nextTrack = () => emit('next-track')
         <span class="control-hint">{{ props.state.isPlaying ? 'RECEIVING' : 'PAUSED' }}</span>
       </div>
     </template>
-
-    <p class="simulation-note"><span aria-hidden="true">✦</span> Fixture broadcast · simulation</p>
   </section>
 </template>
 
@@ -97,7 +95,6 @@ const nextTrack = () => emit('next-track')
 .eyebrow,
 .track-kicker,
 .time-row,
-.simulation-note,
 .control-hint {
   margin: 0;
   letter-spacing: 0.14em;
@@ -151,8 +148,6 @@ h3 { overflow: hidden; margin: 0.32rem 0 0.15rem; font-size: 1.12rem; font-weigh
 .control-button--play { order: 1; }
 .control-hint { order: 3; min-width: 4.2rem; color: #71869c; }
 
-.simulation-note { margin-top: 1.05rem; color: #ad9bba; text-align: center; }
-.simulation-note span { margin-right: 0.25rem; color: #75f2ee; }
 .state-message { display: flex; align-items: center; justify-content: center; gap: 0.55rem; min-height: 9.2rem; color: #b0c0d2; font-size: 0.82rem; }
 .state-message--empty { flex-direction: column; gap: 0.35rem; text-align: center; }
 .state-message small { color: #6f8297; font-size: 0.67rem; }

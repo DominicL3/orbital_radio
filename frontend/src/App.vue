@@ -82,18 +82,7 @@ function nextTrack() {
         <span class="wordmark-orbit" aria-hidden="true"><span /></span>
         <span>ORBITAL <em>RADIO</em></span>
       </a>
-      <div class="topbar-meta">
-        <span class="live-indicator"><span />ON AIR / LIVE VIEW</span>
-        <span class="topbar-divider" aria-hidden="true" />
-        <span>01 TARGET ONLINE</span>
-      </div>
     </header>
-
-    <section class="title-block" aria-label="Orbital Radio title block">
-      <p class="title-kicker"><span class="kicker-wave" aria-hidden="true">〰</span> LOW EARTH ORBIT / 51.6° INCLINATION</p>
-      <h2>ISS <span>GROOVE</span></h2>
-      <p class="title-description">A moving mixtape drawn across the night side of Earth.</p>
-    </section>
 
     <aside class="target-overlay">
       <SatelliteInfoPanel :satellite="selectedSatellite" @focus="focusSelectedSatellite" />
@@ -110,12 +99,6 @@ function nextTrack() {
     <aside class="radio-overlay">
       <RadioPanel :state="radioState" @toggle-play="toggleRadio" @next-track="nextTrack" />
     </aside>
-
-    <footer class="status-footer">
-      <div class="legend-item"><span class="legend-dot" /> ISS / SIMULATED POSITION</div>
-      <div class="footer-note">DATA SOURCE · DEMO ORBITAL PROVIDER</div>
-      <div class="coordinates">EARTH / <span>ROTATING</span></div>
-    </footer>
   </main>
 </template>
 
@@ -147,10 +130,8 @@ function nextTrack() {
 }
 
 .topbar,
-.title-block,
 .target-overlay,
-.radio-overlay,
-.status-footer {
+.radio-overlay {
   position: absolute;
   z-index: 2;
 }
@@ -210,79 +191,8 @@ function nextTrack() {
   width: 4px;
 }
 
-.topbar-meta {
-  align-items: center;
-  color: rgba(233, 213, 250, 0.58);
-  display: flex;
-  font-size: 9px;
-  font-weight: 700;
-  gap: 13px;
-  letter-spacing: 0.16em;
-}
-
-.live-indicator {
-  align-items: center;
-  color: #7ff7e9;
-  display: inline-flex;
-  gap: 6px;
-}
-
-.live-indicator span {
-  background: #7ff7e9;
-  border-radius: 50%;
-  box-shadow: 0 0 9px rgba(158, 214, 249, 0.8);
-  height: 5px;
-  width: 5px;
-}
-
-.topbar-divider {
-  background: rgba(193, 220, 239, 0.22);
-  height: 13px;
-  width: 1px;
-}
-
-.title-block {
-  left: 32px;
-  top: 120px;
-}
-
-.title-kicker {
-  color: rgba(190, 239, 252, 0.76);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.19em;
-  margin: 0 0 10px;
-}
-
-.kicker-wave { color: #ff75c4; font-size: 1.35em; letter-spacing: -0.18em; margin-right: 0.5rem; }
-
-h2 {
-  font-size: 74px;
-  font-weight: 800;
-  letter-spacing: -0.075em;
-  line-height: 0.95;
-  margin: 0;
-}
-
-h2 span {
-  background: linear-gradient(90deg, #ff69bb, #ffd465 48%, #6beeff);
-  background-clip: text;
-  color: transparent;
-  display: block;
-  font-size: 0.42em;
-  font-weight: 700;
-  letter-spacing: 0.24em;
-  margin-top: 12px;
-}
-
-.title-description {
-  color: rgba(238, 221, 251, 0.8);
-  font-size: 12px;
-  margin: 18px 0 0;
-}
-
 .target-overlay {
-  bottom: 78px;
+  bottom: 32px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -291,53 +201,15 @@ h2 span {
 }
 
 .radio-overlay {
-  bottom: 78px;
+  bottom: 32px;
   right: 32px;
   width: min(330px, calc(100vw - 64px));
 }
 
-.status-footer {
-  align-items: center;
-  bottom: 25px;
-  color: rgba(181, 211, 232, 0.45);
-  display: flex;
-  font-size: 9px;
-  font-weight: 700;
-  gap: 24px;
-  left: 32px;
-  letter-spacing: 0.14em;
-  right: 32px;
-}
-
-.legend-item {
-  align-items: center;
-  display: inline-flex;
-  gap: 7px;
-}
-
-.legend-dot {
-  background: #ff69bd;
-  border-radius: 50%;
-  box-shadow: 0 0 10px rgba(255, 105, 189, 0.9);
-  display: inline-block;
-  height: 5px;
-  width: 5px;
-}
-
-.footer-note {
-  margin-left: auto;
-}
-
-.coordinates span {
-  color: #79eeff;
-}
-
 @media (max-width: 760px) {
   .topbar,
-  .title-block,
   .target-overlay,
-  .radio-overlay,
-  .status-footer {
+  .radio-overlay {
     left: 18px;
     right: 18px;
   }
@@ -346,22 +218,8 @@ h2 span {
     top: 18px;
   }
 
-  .topbar-meta span:last-child,
-  .topbar-divider,
-  .footer-note {
-    display: none;
-  }
-
-  .title-block {
-    top: 17%;
-  }
-
-  h2 {
-    font-size: clamp(40px, 5.2vw, 74px);
-  }
-
   .target-overlay {
-    bottom: 70px;
+    bottom: 18px;
     width: auto;
   }
 
@@ -371,21 +229,9 @@ h2 span {
     width: min(250px, calc(100vw - 36px));
   }
 
-  .status-footer {
-    bottom: 18px;
-    right: auto;
-  }
-
-  .coordinates {
-    display: none;
-  }
 }
 
 @media (max-width: 540px) {
-  .title-block {
-    top: 14%;
-  }
-
   .target-overlay {
     bottom: 80px;
   }
@@ -395,10 +241,6 @@ h2 span {
     left: 18px;
     right: 18px;
     width: auto;
-  }
-
-  .status-footer {
-    display: none;
   }
 }
 </style>
