@@ -15,3 +15,8 @@
 - `src/features/globe/` exclusively owns Cesium lifecycle, entities, and camera actions.
 - `src/features/explorer/` owns overlays and simulation controls. It communicates with the globe through typed props/events/exposed methods only.
 - `src/features/radio/` owns mock radio state and presentation.
+
+## Commit messages
+
+- Use short, imperative, Title Case subjects that describe the completed change, such as `Remove decorative space confetti` or `Stabilize desktop title block layout`.
+- Do not use Conventional Commit prefixes such as `feat:`, `fix:`, `chore:`, or scopes.
