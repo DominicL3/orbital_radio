@@ -76,9 +76,6 @@ function nextTrack() {
     />
 
     <div class="vignette" aria-hidden="true" />
-    <div class="cosmic-confetti" aria-hidden="true">
-      <span v-for="dot in 12" :key="dot" :class="`spark spark-${dot}`" />
-    </div>
 
     <header class="topbar">
       <a class="wordmark" href="/" aria-label="Orbital Radio home">
@@ -148,21 +145,6 @@ function nextTrack() {
   position: absolute;
   z-index: 1;
 }
-
-.cosmic-confetti { inset: 0; overflow: hidden; pointer-events: none; position: absolute; z-index: 1; }
-.spark { border-radius: 99px; opacity: 0.72; position: absolute; }
-.spark-1 { background: #ff5bbd; box-shadow: 0 0 15px #ff5bbd; height: 5px; left: 19%; top: 19%; width: 5px; }
-.spark-2 { background: #6eecff; height: 3px; left: 45%; top: 13%; width: 12px; }
-.spark-3 { background: #ffe272; height: 6px; left: 70%; top: 34%; width: 6px; }
-.spark-4 { background: #a688ff; height: 3px; left: 82%; top: 58%; width: 3px; }
-.spark-5 { background: #f96d86; height: 8px; left: 11%; top: 72%; transform: rotate(42deg); width: 2px; }
-.spark-6 { background: #7ffff0; height: 4px; left: 63%; top: 77%; width: 4px; }
-.spark-7 { background: #ffbf69; height: 2px; left: 35%; top: 42%; width: 10px; }
-.spark-8 { background: #f27fff; height: 4px; left: 94%; top: 16%; width: 4px; }
-.spark-9 { background: #b8ff72; height: 3px; left: 53%; top: 61%; width: 3px; }
-.spark-10 { background: #ff6d9a; height: 10px; left: 7%; top: 34%; transform: rotate(58deg); width: 2px; }
-.spark-11 { background: #72bdff; height: 3px; left: 76%; top: 83%; width: 11px; }
-.spark-12 { background: #f8da6a; height: 4px; left: 27%; top: 88%; width: 4px; }
 
 .topbar,
 .hero-copy,
@@ -349,13 +331,6 @@ h2 span {
 .coordinates span {
   color: #79eeff;
 }
-
-@media (prefers-reduced-motion: no-preference) {
-  .spark-1, .spark-6, .spark-9 { animation: twinkle 2.7s ease-in-out infinite alternate; }
-  .spark-3, .spark-8, .spark-12 { animation: twinkle 3.5s ease-in-out 0.7s infinite alternate; }
-}
-
-@keyframes twinkle { to { opacity: 0.18; transform: scale(1.8); } }
 
 @media (max-width: 760px) {
   .topbar,
