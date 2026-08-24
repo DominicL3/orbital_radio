@@ -220,11 +220,6 @@ defineExpose({ focusSatellite })
 <template>
   <section class="cesium-globe" aria-label="ISS globe simulation">
     <div ref="cesiumHost" class="cesium-globe__canvas" aria-hidden="true" />
-    <div class="cesium-globe__simulation" role="status" aria-live="polite">
-      <span class="cesium-globe__pulse" aria-hidden="true" />
-      <span>ISS SIMULATION</span>
-      <small>DEMO TRAJECTORY</small>
-    </div>
     <div v-if="isFallback" class="cesium-globe__fallback" role="img" aria-label="ISS simulation fallback">
       WebGL globe unavailable — ISS SIMULATION remains available in this view.
     </div>
@@ -247,35 +242,6 @@ defineExpose({ focusSatellite })
   inset: 0;
 }
 
-.cesium-globe__simulation {
-  position: absolute;
-  top: 1rem;
-  left: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.55rem 0.75rem;
-  border: 1px solid rgba(130, 202, 255, 0.28);
-  border-radius: 999px;
-  background: rgba(2, 12, 21, 0.76);
-  color: #9ddcff;
-  font: 600 0.68rem/1.1 ui-monospace, SFMono-Regular, Menlo, monospace;
-  letter-spacing: 0.13em;
-}
-
-.cesium-globe__simulation small {
-  color: rgba(223, 243, 255, 0.52);
-  font-size: 0.56rem;
-}
-
-.cesium-globe__pulse {
-  width: 0.42rem;
-  height: 0.42rem;
-  border-radius: 50%;
-  background: #5fe1af;
-  box-shadow: 0 0 0 0.22rem rgba(95, 225, 175, 0.15), 0 0 0.8rem #5fe1af;
-}
-
 .cesium-globe__fallback {
   position: absolute;
   inset: 50% 1.5rem auto;
@@ -289,11 +255,4 @@ defineExpose({ focusSatellite })
   font: 0.72rem/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-@media (max-width: 640px) {
-  .cesium-globe__simulation {
-    top: 0.7rem;
-    left: 0.7rem;
-    flex-wrap: wrap;
-  }
-}
 </style>

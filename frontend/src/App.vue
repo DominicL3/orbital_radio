@@ -89,10 +89,10 @@ function nextTrack() {
       </div>
     </header>
 
-    <section class="hero-copy" aria-label="Orbital Radio introduction">
-      <p class="hero-kicker"><span class="kicker-wave" aria-hidden="true">〰</span> LOW EARTH ORBIT / 51.6° INCLINATION</p>
+    <section class="title-block" aria-label="Orbital Radio title block">
+      <p class="title-kicker"><span class="kicker-wave" aria-hidden="true">〰</span> LOW EARTH ORBIT / 51.6° INCLINATION</p>
       <h2>ISS <span>GROOVE</span></h2>
-      <p class="hero-description">A moving mixtape drawn across the night side of Earth.</p>
+      <p class="title-description">A moving mixtape drawn across the night side of Earth.</p>
     </section>
 
     <aside class="target-overlay">
@@ -147,7 +147,7 @@ function nextTrack() {
 }
 
 .topbar,
-.hero-copy,
+.title-block,
 .target-overlay,
 .radio-overlay,
 .status-footer {
@@ -241,12 +241,12 @@ function nextTrack() {
   width: 1px;
 }
 
-.hero-copy {
+.title-block {
   left: 32px;
-  top: 26%;
+  top: 120px;
 }
 
-.hero-kicker {
+.title-kicker {
   color: rgba(190, 239, 252, 0.76);
   font-size: 9px;
   font-weight: 700;
@@ -257,7 +257,7 @@ function nextTrack() {
 .kicker-wave { color: #ff75c4; font-size: 1.35em; letter-spacing: -0.18em; margin-right: 0.5rem; }
 
 h2 {
-  font-size: clamp(40px, 5.2vw, 74px);
+  font-size: 74px;
   font-weight: 800;
   letter-spacing: -0.075em;
   line-height: 0.95;
@@ -275,7 +275,7 @@ h2 span {
   margin-top: 12px;
 }
 
-.hero-description {
+.title-description {
   color: rgba(238, 221, 251, 0.8);
   font-size: 12px;
   margin: 18px 0 0;
@@ -334,7 +334,7 @@ h2 span {
 
 @media (max-width: 760px) {
   .topbar,
-  .hero-copy,
+  .title-block,
   .target-overlay,
   .radio-overlay,
   .status-footer {
@@ -352,8 +352,12 @@ h2 span {
     display: none;
   }
 
-  .hero-copy {
+  .title-block {
     top: 17%;
+  }
+
+  h2 {
+    font-size: clamp(40px, 5.2vw, 74px);
   }
 
   .target-overlay {
@@ -378,7 +382,7 @@ h2 span {
 }
 
 @media (max-width: 540px) {
-  .hero-copy {
+  .title-block {
     top: 14%;
   }
 
