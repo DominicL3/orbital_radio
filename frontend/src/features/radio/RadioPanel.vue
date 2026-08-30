@@ -55,7 +55,7 @@ const nextTrack = () => emit('next-track')
         </div>
       </div>
 
-      <div class="signal-line" aria-hidden="true"><i v-for="bar in 18" :key="bar" :class="{ 'is-playing': props.state.isPlaying }" /></div>
+      <div class="signal-line" aria-hidden="true"><i v-for="bar in 36" :key="bar" :class="{ 'is-playing': props.state.isPlaying }" /></div>
       <div class="progress-track" aria-hidden="true"><span :class="{ 'is-playing': props.state.isPlaying }"></span></div>
       <div class="time-row"><span>LIVE SIGNAL</span><span>{{ props.state.track.durationLabel }}</span></div>
 
@@ -129,10 +129,16 @@ h3 { overflow: hidden; margin: 0.32rem 0 0.15rem; font-size: 1.12rem; font-weigh
 .context-marker { color: #75f3ee; font-size: 0.8rem; }
 .context-separator { color: #617387; }
 
-.signal-line { align-items: center; display: flex; gap: 2px; height: 1rem; margin-bottom: 0.25rem; overflow: hidden; }
-.signal-line i { background: linear-gradient(#77f6ed, #ff80c9); border-radius: 999px; display: block; height: 20%; opacity: 0.45; width: 100%; }
-.signal-line i:nth-child(3n + 1) { height: 54%; }.signal-line i:nth-child(4n) { height: 82%; }
-.signal-line i.is-playing { animation: equalize 720ms ease-in-out infinite alternate; }.signal-line i.is-playing:nth-child(3n) { animation-delay: 180ms; }.signal-line i.is-playing:nth-child(4n) { animation-delay: 340ms; }
+.signal-line { align-items: flex-end; display: flex; justify-content: space-between; height: 1.55rem; margin-bottom: 0.25rem; overflow: hidden; padding: 0 0.1rem; }
+.signal-line i { flex: 0 0 0.14rem; width: 0.14rem; height: var(--rest-height); border-radius: 999px; background: linear-gradient(to top, #ff80c9, #77f6ed); opacity: 0.58; transform-origin: bottom; }
+.signal-line i:nth-child(5n + 1) { --rest-height: 26%; --peak-height: 74%; --tempo: 860ms; }
+.signal-line i:nth-child(5n + 2) { --rest-height: 61%; --peak-height: 96%; --tempo: 540ms; }
+.signal-line i:nth-child(5n + 3) { --rest-height: 38%; --peak-height: 84%; --tempo: 690ms; }
+.signal-line i:nth-child(5n + 4) { --rest-height: 77%; --peak-height: 100%; --tempo: 620ms; }
+.signal-line i:nth-child(5n) { --rest-height: 18%; --peak-height: 57%; --tempo: 930ms; }
+.signal-line i.is-playing { animation: equalize var(--tempo) ease-in-out infinite alternate; }
+.signal-line i.is-playing:nth-child(3n) { animation-delay: -180ms; }
+.signal-line i.is-playing:nth-child(4n) { animation-delay: -340ms; }
 .progress-track { height: 0.18rem; overflow: hidden; border-radius: 99px; background: rgba(255, 255, 255, 0.15); }
 .progress-track span { display: block; width: 29%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #6ef2eb, #ff69bd, #ffe475); transition: width 0.2s ease; }
 .progress-track span.is-playing { width: 55%; animation: progress 4s linear infinite alternate; }
@@ -160,7 +166,7 @@ h3 { overflow: hidden; margin: 0.32rem 0 0.15rem; font-size: 1.12rem; font-weigh
 @keyframes blink { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
 @keyframes bars { to { height: 1.15rem; opacity: 0.48; } }
 @keyframes progress { from { width: 43%; } to { width: 66%; } }
-@keyframes equalize { to { height: 100%; opacity: 1; } }
+@keyframes equalize { to { height: var(--peak-height); opacity: 1; } }
 
 @media (prefers-reduced-motion: no-preference) { .artwork { animation: record-spin 15s linear infinite; } }
 @keyframes record-spin { to { transform: rotate(360deg); } }
