@@ -1,5 +1,7 @@
 # Orbital Radio Frontend
 
+For project-wide architecture, deployment, and session-policy decisions, see [`../CLAUDE.md`](../CLAUDE.md). This file contains frontend-specific guidance only.
+
 ## Locked product decisions
 
 - Use Vue 3, Vite, and TypeScript. Cesium owns the globe; React, Next.js, and D3 are not part of this app.

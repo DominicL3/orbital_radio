@@ -2,6 +2,14 @@
 
 The Orbital Radio is a web-based music streaming application that combines real-time satellite trajectories with geographic-based Spotify playlists. As satellites orbit Earth, the application dynamically selects and plays popular music from each country/region the satellite passes over.
 
+## Session expiry limits
+
+- Spotify login is remembered by default for **seven days** (`SESSION_EXPIRE_HOURS=168`); the MVP does not need a separate “Remember me” checkbox.
+- The browser receives only an opaque session ID in an `HttpOnly`, `Secure`, `SameSite=Lax` cookie. Spotify access and refresh tokens must never be returned to browser JavaScript.
+- The OAuth state cookie is short-lived (ten minutes) and one-time use.
+- When Spotify login is enabled in production, store sessions and the server-only Spotify token data in PostgreSQL so they survive a Railway restart or deploy. Redis is not required for the hobby-project MVP.
+- Logging out deletes the server session and clears the cookie. Expired sessions should be removed routinely.
+
 # Backend
 ## Core Requirements
 
@@ -493,7 +501,7 @@ ENVIRONMENT=production
 LOG_LEVEL=INFO
 
 # Session Management
-SESSION_EXPIRE_HOURS=3
+SESSION_EXPIRE_HOURS=168
 MAX_PLAYED_TRACKS_PER_SESSION=500
 
 # Playlist Generation
