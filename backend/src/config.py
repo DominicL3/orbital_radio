@@ -5,7 +5,15 @@ Centralizes environment variables, application settings, and satellite catalog.
 
 from datetime import datetime, timezone
 from os import environ
+from pathlib import Path
 from typing import Any, Dict
+
+from dotenv import load_dotenv
+
+# Local development uses an .env file in the repo root, but in prod, environment
+# variables are sourced from Railway Variables or whatever deployment platform
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+load_dotenv(PROJECT_ROOT / ".env", override=False)
 
 
 def utcnow() -> datetime:
