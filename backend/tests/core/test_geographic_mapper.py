@@ -1,7 +1,7 @@
 """Test cases for geographic region mapping functionality."""
 
 from unittest.mock import patch
-from typing import List, Tuple
+
 import pytest
 
 
@@ -57,7 +57,7 @@ class MockGeographicRegion:
 
 
 @pytest.fixture
-def sample_coordinates() -> List[Tuple[float, float, str]]:
+def sample_coordinates() -> list[tuple[float, float, str]]:
     """Sample coordinates with expected country codes."""
     return [
         (40.7128, -74.0060, "US"),  # New York City
@@ -72,7 +72,7 @@ def sample_coordinates() -> List[Tuple[float, float, str]]:
 
 
 @pytest.fixture
-def ocean_coordinates() -> List[Tuple[float, float]]:
+def ocean_coordinates() -> list[tuple[float, float]]:
     """Coordinates over oceans."""
     return [
         (25.0, -30.0),  # Atlantic Ocean
@@ -96,7 +96,7 @@ class TestGeographicMapper:
         assert hasattr(mapper, "timezone_cache")
 
     def test_get_region_from_coordinates_land(
-        self, sample_coordinates: List[Tuple[float, float, str]]
+        self, sample_coordinates: list[tuple[float, float, str]]
     ) -> None:
         """Should map land coordinates to correct countries."""
         from src.core.geographic_mapper import GeographicMapper
@@ -117,7 +117,7 @@ class TestGeographicMapper:
                 mock_lookup.assert_called_once_with(lat, lon)
 
     def test_get_region_from_coordinates_ocean(
-        self, ocean_coordinates: List[Tuple[float, float]]
+        self, ocean_coordinates: list[tuple[float, float]]
     ) -> None:
         """Should return None for ocean coordinates."""
         from src.core.geographic_mapper import GeographicMapper

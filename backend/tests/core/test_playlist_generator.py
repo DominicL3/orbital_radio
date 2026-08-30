@@ -1,7 +1,6 @@
 """Test cases for geographic playlist generation."""
 
 from unittest.mock import Mock, patch
-from typing import List, Set
 
 import pytest
 
@@ -27,7 +26,7 @@ class MockGeographicRegion:
 
 
 @pytest.fixture
-def mock_tracks() -> List[MockTrack]:
+def mock_tracks() -> list[MockTrack]:
     """Sample tracks with various durations."""
     return [
         MockTrack("track1", 180000),  # 3 minutes
@@ -39,7 +38,7 @@ def mock_tracks() -> List[MockTrack]:
 
 
 @pytest.fixture
-def mock_played_tracks() -> Set[str]:
+def mock_played_tracks() -> set[str]:
     """Set of already played track IDs."""
     return {"track1", "track3"}
 
@@ -48,7 +47,7 @@ class TestGeographicPlaylistGenerator:
     """Test GeographicPlaylistGenerator class."""
 
     def test_filter_by_duration_default_range(
-        self, mock_tracks: List[MockTrack]
+        self, mock_tracks: list[MockTrack]
     ) -> None:
         """Should filter tracks by default duration range (1-8 minutes)."""
         from src.core.playlist_generator import GeographicPlaylistGenerator
@@ -66,7 +65,7 @@ class TestGeographicPlaylistGenerator:
         assert "track4" not in track_ids  # Too long
 
     def test_filter_by_duration_custom_range(
-        self, mock_tracks: List[MockTrack]
+        self, mock_tracks: list[MockTrack]
     ) -> None:
         """Should filter tracks by custom duration range."""
         from src.core.playlist_generator import GeographicPlaylistGenerator
@@ -82,7 +81,7 @@ class TestGeographicPlaylistGenerator:
         assert all(120000 <= duration <= 300000 for duration in durations)
 
     def test_deduplicate_tracks(
-        self, mock_tracks: List[MockTrack], mock_played_tracks: Set[str]
+        self, mock_tracks: list[MockTrack], mock_played_tracks: set[str]
     ) -> None:
         """Should remove already played tracks."""
         from src.core.playlist_generator import GeographicPlaylistGenerator
@@ -103,7 +102,7 @@ class TestGeographicPlaylistGenerator:
         "src.core.playlist_generator.GeographicPlaylistGenerator.get_region_top_50_tracks"
     )
     def test_get_next_track_success(
-        self, mock_get_tracks: Mock, mock_tracks: List[MockTrack]
+        self, mock_get_tracks: Mock, mock_tracks: list[MockTrack]
     ) -> None:
         """Should return next track based on satellite position."""
         from src.core.playlist_generator import GeographicPlaylistGenerator
@@ -133,7 +132,7 @@ class TestGeographicPlaylistGenerator:
         "src.core.playlist_generator.GeographicPlaylistGenerator.get_region_top_50_tracks"
     )
     def test_get_next_track_ocean_fallback(
-        self, mock_get_tracks: Mock, mock_get_region: Mock, mock_tracks: List[MockTrack]
+        self, mock_get_tracks: Mock, mock_get_region: Mock, mock_tracks: list[MockTrack]
     ) -> None:
         """Should fallback to nearest region when over ocean."""
         from src.core.playlist_generator import GeographicPlaylistGenerator
@@ -147,17 +146,15 @@ class TestGeographicPlaylistGenerator:
 
         generator = GeographicPlaylistGenerator()
 
-        with patch.object(
-            generator, "filter_by_duration", return_value=mock_tracks[:2]
+        with (
+            patch.object(generator, "filter_by_duration", return_value=mock_tracks[:2]),
+            patch.object(generator, "deduplicate_tracks", return_value=mock_tracks[:2]),
         ):
-            with patch.object(
-                generator, "deduplicate_tracks", return_value=mock_tracks[:2]
-            ):
-                track = generator.get_next_track((25.0, -30.0), set())  # Atlantic Ocean
+            track = generator.get_next_track((25.0, -30.0), set())  # Atlantic Ocean
 
-                assert track is not None
-                # Should have called get_region twice (ocean, then fallback)
-                assert mock_get_region.call_count == 2
+            assert track is not None
+            # Should have called get_region twice (ocean, then fallback)
+            assert mock_get_region.call_count == 2
 
     def test_get_next_track_no_available_tracks(self) -> None:
         """Should handle case when no tracks are available."""

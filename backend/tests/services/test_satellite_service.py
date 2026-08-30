@@ -1,15 +1,16 @@
 """Test cases for satellite service."""
 
-from unittest.mock import Mock, patch
-from typing import Dict, Any, List
 from datetime import timedelta
+from typing import Any
+from unittest.mock import Mock, patch
+
 import pytest
 
 from src.config import utcnow
 
 
 @pytest.fixture
-def mock_tle_data() -> Dict[str, Any]:
+def mock_tle_data() -> dict[str, Any]:
     """Mock TLE data for testing."""
     return {
         "satellite_id": "iss",
@@ -23,7 +24,7 @@ def mock_tle_data() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def mock_satellite_list() -> List[Dict[str, Any]]:
+def mock_satellite_list() -> list[dict[str, Any]]:
     """Mock list of satellites."""
     return [
         {
@@ -63,7 +64,7 @@ class TestSatelliteService:
 
     @patch("src.core.satellite_tracker.SatelliteTLEManager.fetch_tle_data")
     def test_fetch_satellite_tle_success(
-        self, mock_fetch: Mock, mock_tle_data: Dict[str, Any]
+        self, mock_fetch: Mock, mock_tle_data: dict[str, Any]
     ) -> None:
         """Should fetch TLE data successfully."""
         from src.services.satellite_service import SatelliteService
@@ -107,7 +108,7 @@ class TestSatelliteService:
         assert "CelesTrak unavailable" in str(exc_info.value)
 
     def test_get_satellite_list(
-        self, mock_satellite_list: List[Dict[str, Any]]
+        self, mock_satellite_list: list[dict[str, Any]]
     ) -> None:
         """Should return list of available satellites."""
         from src.services.satellite_service import SatelliteService
@@ -115,7 +116,9 @@ class TestSatelliteService:
         service = SatelliteService()
 
         with patch.object(
-            service.repository, "get_active_satellites", return_value=mock_satellite_list
+            service.repository,
+            "get_active_satellites",
+            return_value=mock_satellite_list,
         ):
             satellites = service.get_satellite_list()
 
@@ -125,7 +128,7 @@ class TestSatelliteService:
             assert satellites[2]["category"] == "remote_sensing"
 
     def test_get_satellite_list_filtered_by_category(
-        self, mock_satellite_list: List[Dict[str, Any]]
+        self, mock_satellite_list: list[dict[str, Any]]
     ) -> None:
         """Should filter satellites by category."""
         from src.services.satellite_service import SatelliteService
@@ -148,7 +151,7 @@ class TestSatelliteService:
             assert satellites[0]["category"] == "weather"
 
     def test_get_satellite_details(
-        self, mock_satellite_list: List[Dict[str, Any]]
+        self, mock_satellite_list: list[dict[str, Any]]
     ) -> None:
         """Should return detailed satellite information."""
         from src.services.satellite_service import SatelliteService
@@ -243,7 +246,7 @@ class TestSatelliteService:
 
     @patch("src.core.satellite_tracker.SatelliteTLEManager.get_cached_tle")
     def test_get_cached_tle_data(
-        self, mock_cached: Mock, mock_tle_data: Dict[str, Any]
+        self, mock_cached: Mock, mock_tle_data: dict[str, Any]
     ) -> None:
         """Should return cached TLE data when available."""
         from src.services.satellite_service import SatelliteService
@@ -297,9 +300,7 @@ class TestTLEDataManagement:
             "epoch": utcnow() - timedelta(hours=2),
         }
 
-        with patch.object(
-            service.tracker, "get_cached_tle", return_value=fresh_tle
-        ):
+        with patch.object(service.tracker, "get_cached_tle", return_value=fresh_tle):
             is_fresh = service.is_tle_data_fresh("iss", max_age_hours=6)
             assert is_fresh is True
 
@@ -309,9 +310,7 @@ class TestTLEDataManagement:
             "epoch": utcnow() - timedelta(hours=26),
         }
 
-        with patch.object(
-            service.tracker, "get_cached_tle", return_value=stale_tle
-        ):
+        with patch.object(service.tracker, "get_cached_tle", return_value=stale_tle):
             is_fresh = service.is_tle_data_fresh("iss", max_age_hours=6)
             assert is_fresh is False
 
@@ -343,7 +342,7 @@ class TestTLEDataManagement:
 
     @patch("src.core.satellite_tracker.SatelliteTLEManager.fetch_tle_data")
     def test_force_tle_refresh(
-        self, mock_fetch: Mock, mock_tle_data: Dict[str, Any]
+        self, mock_fetch: Mock, mock_tle_data: dict[str, Any]
     ) -> None:
         """Should force refresh of TLE data even if cached data exists."""
         from src.services.satellite_service import SatelliteService

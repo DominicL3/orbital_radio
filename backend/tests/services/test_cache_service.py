@@ -1,16 +1,16 @@
 """Test cases for cache service."""
 
-from unittest.mock import patch
-from typing import Dict, Any
 from datetime import timedelta
-
-from src.config import utcnow
+from typing import Any
+from unittest.mock import patch
 
 import pytest
 
+from src.config import utcnow
+
 
 @pytest.fixture
-def mock_session_data() -> Dict[str, Any]:
+def mock_session_data() -> dict[str, Any]:
     """Mock session data for testing."""
     return {
         "session_id": "session_123",
@@ -49,7 +49,7 @@ class TestCacheService:
         assert hasattr(cache_service, "playlist_cache")
         assert hasattr(cache_service, "max_session_size")
 
-    def test_create_session(self, mock_session_data: Dict[str, Any]) -> None:
+    def test_create_session(self, mock_session_data: dict[str, Any]) -> None:
         """Should create new session and return session ID."""
         from src.services.cache_service import CacheService
 
@@ -64,7 +64,7 @@ class TestCacheService:
         assert stored_session is not None
         assert stored_session["user_profile"]["id"] == "user_123"
 
-    def test_get_session_exists(self, mock_session_data: Dict[str, Any]) -> None:
+    def test_get_session_exists(self, mock_session_data: dict[str, Any]) -> None:
         """Should retrieve existing session."""
         from src.services.cache_service import CacheService
 
@@ -86,7 +86,7 @@ class TestCacheService:
 
         assert session is None
 
-    def test_update_session(self, mock_session_data: Dict[str, Any]) -> None:
+    def test_update_session(self, mock_session_data: dict[str, Any]) -> None:
         """Should update existing session data."""
         from src.services.cache_service import CacheService
 
@@ -118,7 +118,7 @@ class TestCacheService:
 
         assert "session" in str(exc_info.value).lower()
 
-    def test_delete_session(self, mock_session_data: Dict[str, Any]) -> None:
+    def test_delete_session(self, mock_session_data: dict[str, Any]) -> None:
         """Should delete existing session."""
         from src.services.cache_service import CacheService
 
@@ -175,8 +175,8 @@ class TestSessionExpiration:
         active_id = cache_service.create_session(active_session)
 
         # Manually expire the session
-        cache_service.session_cache[expired_id]["expires_at"] = (
-            utcnow() - timedelta(hours=1)
+        cache_service.session_cache[expired_id]["expires_at"] = utcnow() - timedelta(
+            hours=1
         )
 
         # Run cleanup
@@ -210,7 +210,7 @@ class TestSessionExpiration:
 
         assert cache_service._is_session_expired(active_session) is False
 
-    def test_extend_session_expiration(self, mock_session_data: Dict[str, Any]) -> None:
+    def test_extend_session_expiration(self, mock_session_data: dict[str, Any]) -> None:
         """Should extend session expiration time."""
         from src.services.cache_service import CacheService
 
@@ -228,7 +228,7 @@ class TestSessionExpiration:
         assert new_expiry > original_expiry
         assert (new_expiry - original_expiry) >= timedelta(hours=1, minutes=59)
 
-    def test_auto_extend_on_activity(self, mock_session_data: Dict[str, Any]) -> None:
+    def test_auto_extend_on_activity(self, mock_session_data: dict[str, Any]) -> None:
         """Should automatically extend session on activity."""
         from src.services.cache_service import CacheService
 
@@ -514,8 +514,9 @@ class TestConcurrency:
 
     def test_thread_safe_session_operations(self) -> None:
         """Should handle concurrent session operations safely."""
-        from src.services.cache_service import CacheService
         import threading
+
+        from src.services.cache_service import CacheService
 
         cache_service = CacheService()
         results = []
@@ -547,8 +548,9 @@ class TestConcurrency:
 
     def test_concurrent_cache_cleanup(self) -> None:
         """Should handle concurrent cache cleanup operations."""
-        from src.services.cache_service import CacheService
         import threading
+
+        from src.services.cache_service import CacheService
 
         cache_service = CacheService()
 

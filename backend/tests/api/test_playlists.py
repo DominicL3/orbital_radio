@@ -5,13 +5,15 @@ Tests cover orbital playlist generation, next/previous track logic, track markin
 and geographic-based music selection with proper mocking of external dependencies.
 """
 
-import pytest
-from unittest.mock import Mock, patch
 from datetime import timedelta
-from typing import Dict, List, Any
-from src.config import utcnow
-from fastapi.testclient import TestClient
+from typing import Any
+from unittest.mock import Mock, patch
+
+import pytest
 from fastapi import status
+from fastapi.testclient import TestClient
+
+from src.config import utcnow
 
 # Import test fixtures from conftest
 
@@ -30,7 +32,7 @@ class TestPlaylistEndpoints:
         return TestClient(mock_app)
 
     @pytest.fixture
-    def mock_orbital_playlist_request(self) -> Dict[str, Any]:
+    def mock_orbital_playlist_request(self) -> dict[str, Any]:
         """Mock orbital playlist generation request."""
         return {
             "session_id": "test_session_123",
@@ -41,8 +43,8 @@ class TestPlaylistEndpoints:
 
     @pytest.fixture
     def mock_generated_playlist(
-        self, mock_playlist_tracks: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+        self, mock_playlist_tracks: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """Mock generated orbital playlist response."""
         return {
             "playlist_id": "orbital_playlist_123",
@@ -65,9 +67,7 @@ class TestPlaylistEndpoints:
                     "region": "US",
                 },
                 {
-                    "timestamp": (
-                        utcnow() + timedelta(minutes=30)
-                    ).isoformat(),
+                    "timestamp": (utcnow() + timedelta(minutes=30)).isoformat(),
                     "latitude": 51.5,
                     "longitude": -0.1,
                     "region": "GB",
@@ -77,8 +77,8 @@ class TestPlaylistEndpoints:
 
     @pytest.fixture
     def mock_next_track_response(
-        self, mock_track_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, mock_track_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Mock next track response."""
         track = mock_track_data.copy()
         track.update(
@@ -94,8 +94,8 @@ class TestPlaylistEndpoints:
     def test_generate_orbital_playlist_success(
         self,
         client: TestClient,
-        mock_orbital_playlist_request: Dict[str, Any],
-        mock_generated_playlist: Dict[str, Any],
+        mock_orbital_playlist_request: dict[str, Any],
+        mock_generated_playlist: dict[str, Any],
     ):
         """Test successful orbital playlist generation."""
         with patch("src.services.playlist_service.PlaylistService") as mock_service:
@@ -137,7 +137,7 @@ class TestPlaylistEndpoints:
                 assert call_args[2] == 90
 
     def test_generate_orbital_playlist_invalid_session(
-        self, client: TestClient, mock_orbital_playlist_request: Dict[str, Any]
+        self, client: TestClient, mock_orbital_playlist_request: dict[str, Any]
     ):
         """Test orbital playlist generation with invalid session."""
         with patch(
@@ -207,7 +207,7 @@ class TestPlaylistEndpoints:
             ]
 
     def test_generate_orbital_playlist_spotify_unavailable(
-        self, client: TestClient, mock_orbital_playlist_request: Dict[str, Any]
+        self, client: TestClient, mock_orbital_playlist_request: dict[str, Any]
     ):
         """Test orbital playlist generation when Spotify API is unavailable."""
         with patch(
@@ -234,7 +234,7 @@ class TestPlaylistEndpoints:
                 assert "spotify" in response_data["error"].lower()
 
     def test_get_orbital_playlist_success(
-        self, client: TestClient, mock_generated_playlist: Dict[str, Any]
+        self, client: TestClient, mock_generated_playlist: dict[str, Any]
     ):
         """Test successful retrieval of existing orbital playlist."""
         session_id = "test_session_123"
@@ -277,7 +277,7 @@ class TestPlaylistEndpoints:
             assert "playlist" in response_data["error"].lower()
 
     def test_get_next_track_success(
-        self, client: TestClient, mock_next_track_response: Dict[str, Any]
+        self, client: TestClient, mock_next_track_response: dict[str, Any]
     ):
         """Test successful next track selection based on satellite position."""
         session_id = "test_session_123"
@@ -362,7 +362,7 @@ class TestPlaylistEndpoints:
                 assert "position" in response_data["error"].lower()
 
     def test_get_previous_track_success(
-        self, client: TestClient, mock_track_data: Dict[str, Any]
+        self, client: TestClient, mock_track_data: dict[str, Any]
     ):
         """Test successful previous track retrieval from session history."""
         session_id = "test_session_123"
@@ -515,7 +515,7 @@ class TestPlaylistEndpoints:
                 assert "already" in response_data["error"].lower()
 
     def test_playlist_track_filtering(
-        self, client: TestClient, mock_orbital_playlist_request: Dict[str, Any]
+        self, client: TestClient, mock_orbital_playlist_request: dict[str, Any]
     ):
         """Test track filtering based on duration and content requirements."""
         # Mock playlist with mixed track durations
@@ -615,7 +615,7 @@ class TestPlaylistEndpoints:
                 assert response_data["id"] not in {"track_1", "track_2", "track_3"}
 
     def test_geographic_playlist_mapping(
-        self, client: TestClient, mock_orbital_playlist_request: Dict[str, Any]
+        self, client: TestClient, mock_orbital_playlist_request: dict[str, Any]
     ):
         """Test geographic mapping of tracks to regions."""
         geographic_playlist = {

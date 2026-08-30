@@ -1,8 +1,9 @@
 """Small, defensive client for the Spotify Web API."""
 
-from collections import OrderedDict
 import time
-from typing import Any, Callable
+from collections import OrderedDict
+from collections.abc import Callable
+from typing import Any
 from urllib.parse import quote, urlencode, urlparse
 
 import requests

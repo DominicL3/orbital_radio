@@ -1,9 +1,11 @@
 """Test cases for satellite Pydantic schemas."""
 
 from datetime import timedelta
-from src.config import utcnow
+
 import pytest
 from pydantic import ValidationError
+
+from src.config import utcnow
 
 
 class TestSatelliteSchemas:
@@ -540,7 +542,7 @@ class TestSatelliteSchemaIntegration:
 
     def test_satellite_with_orbit_and_tle(self) -> None:
         """Should integrate satellite response with orbit info and TLE data."""
-        from src.schemas.satellite import SatelliteResponse, OrbitInfo
+        from src.schemas.satellite import OrbitInfo, SatelliteResponse
 
         orbit_info = OrbitInfo(
             altitude_km=408,
@@ -584,8 +586,8 @@ class TestSatelliteSchemaIntegration:
     def test_schema_serialization_compatibility(self) -> None:
         """Should serialize all schemas to JSON correctly."""
         from src.schemas.satellite import (
-            SatelliteResponse,
             OrbitInfo,
+            SatelliteResponse,
         )
 
         # Create complex satellite data

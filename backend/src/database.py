@@ -1,10 +1,11 @@
 """Database connection and repository for satellite persistence."""
 
 import sqlite3
+from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Generator, Any
+from typing import Any
 
 from src.config import get_settings
 
@@ -56,6 +57,8 @@ def init_database() -> None:
                 last_updated TIMESTAMP
             )
         """)
+
+
 class Database:
     """Database utility for query execution."""
 
@@ -155,7 +158,9 @@ class SatelliteRepository:
         Returns:
             list[dict[str, Any]]: Matching satellite records.
         """
-        return Database.fetch_all("SELECT * FROM satellites WHERE category = ?", (category,))
+        return Database.fetch_all(
+            "SELECT * FROM satellites WHERE category = ?", (category,)
+        )
 
     def get_satellite_by_id(self, satellite_id: int | str) -> dict[str, Any] | None:
         """Retrieve satellite by database ID, catalog key, or NORAD ID.
@@ -166,9 +171,13 @@ class SatelliteRepository:
         Returns:
             dict[str, Any] | None: Matching satellite details or None.
         """
-        if isinstance(satellite_id, int) or (isinstance(satellite_id, str) and satellite_id.isdigit()):
+        if isinstance(satellite_id, int) or (
+            isinstance(satellite_id, str) and satellite_id.isdigit()
+        ):
             val = int(satellite_id)
-            result = Database.fetch_one("SELECT * FROM satellites WHERE id = ? OR norad_id = ?", (val, val))
+            result = Database.fetch_one(
+                "SELECT * FROM satellites WHERE id = ? OR norad_id = ?", (val, val)
+            )
             if result:
                 return result
 
@@ -191,7 +200,9 @@ class SatelliteRepository:
                     "tle_line2": settings.iss_fallback_tle_line2,
                     "last_updated": datetime.now(),
                 }
-            result = Database.fetch_one("SELECT * FROM satellites WHERE name = ?", (satellite_id,))
+            result = Database.fetch_one(
+                "SELECT * FROM satellites WHERE name = ?", (satellite_id,)
+            )
             if result:
                 return result
 
@@ -226,8 +237,13 @@ class SatelliteRepository:
             satellite_id: Satellite identifier or NORAD ID.
             is_active: New active status flag.
         """
-        if isinstance(satellite_id, int) or (isinstance(satellite_id, str) and satellite_id.isdigit()):
-            Database.execute_query("UPDATE satellites SET is_active = ? WHERE id = ? OR norad_id = ?", (is_active, int(satellite_id), int(satellite_id)))
+        if isinstance(satellite_id, int) or (
+            isinstance(satellite_id, str) and satellite_id.isdigit()
+        ):
+            Database.execute_query(
+                "UPDATE satellites SET is_active = ? WHERE id = ? OR norad_id = ?",
+                (is_active, int(satellite_id), int(satellite_id)),
+            )
 
     def remove_satellite(self, satellite_id: int | str) -> None:
         """Remove a satellite from database.
@@ -235,8 +251,13 @@ class SatelliteRepository:
         Args:
             satellite_id: Satellite identifier or NORAD ID.
         """
-        if isinstance(satellite_id, int) or (isinstance(satellite_id, str) and satellite_id.isdigit()):
-            Database.execute_query("DELETE FROM satellites WHERE id = ? OR norad_id = ?", (int(satellite_id), int(satellite_id)))
+        if isinstance(satellite_id, int) or (
+            isinstance(satellite_id, str) and satellite_id.isdigit()
+        ):
+            Database.execute_query(
+                "DELETE FROM satellites WHERE id = ? OR norad_id = ?",
+                (int(satellite_id), int(satellite_id)),
+            )
 
     def bulk_update_satellites(self, satellite_updates: list[dict[str, Any]]) -> None:
         """Bulk update satellites in database.

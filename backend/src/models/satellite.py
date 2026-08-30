@@ -1,8 +1,8 @@
 """Database model for satellite entities."""
 
-from datetime import datetime, timedelta
 import json
-from typing import Optional, Dict, Any, List
+from datetime import datetime, timedelta
+from typing import Any, Optional
 
 from src.config import get_settings, utcnow
 
@@ -18,9 +18,9 @@ class Satellite:
         tle_line1: str,
         tle_line2: str,
         tle_epoch: datetime,
-        id: Optional[int] = None,
+        id: int | None = None,
         is_active: bool = True,
-        last_updated: Optional[datetime] = None,
+        last_updated: datetime | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize Satellite instance with field validations.
@@ -51,15 +51,31 @@ class Satellite:
             raise ValueError(f"Invalid category: {category}")
 
         invalid_tle_indicators = {"", "invalid_tle", "1 25544U 98067A"}
-        if not tle_line1 or not isinstance(tle_line1, str) or not tle_line1.strip() or len(tle_line1) > 80 or tle_line1 in invalid_tle_indicators or "extra" in tle_line1:
+        if (
+            not tle_line1
+            or not isinstance(tle_line1, str)
+            or not tle_line1.strip()
+            or len(tle_line1) > 80
+            or tle_line1 in invalid_tle_indicators
+            or "extra" in tle_line1
+        ):
             raise ValueError("Invalid TLE line 1")
-        if not tle_line2 or not isinstance(tle_line2, str) or not tle_line2.strip() or len(tle_line2) > 80 or tle_line2 in invalid_tle_indicators or "extra" in tle_line2:
+        if (
+            not tle_line2
+            or not isinstance(tle_line2, str)
+            or not tle_line2.strip()
+            or len(tle_line2) > 80
+            or tle_line2 in invalid_tle_indicators
+            or "extra" in tle_line2
+        ):
             raise ValueError("Invalid TLE line 2")
 
         if not isinstance(tle_epoch, datetime):
             raise TypeError("tle_epoch must be datetime")
         _now = utcnow()
-        if tle_epoch < _now - timedelta(days=30) or tle_epoch > _now + timedelta(days=1):
+        if tle_epoch < _now - timedelta(days=30) or tle_epoch > _now + timedelta(
+            days=1
+        ):
             raise ValueError("tle_epoch out of valid range")
 
         self.id = id
@@ -72,7 +88,7 @@ class Satellite:
         self.is_active = is_active
         self.last_updated = last_updated or _now
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert model instance to dictionary format.
 
         Returns:
@@ -98,23 +114,46 @@ class Satellite:
         """
         data = self.to_dict()
         data["tle_epoch"] = self.tle_epoch.isoformat()
-        data["last_updated"] = self.last_updated.isoformat() if self.last_updated else None
+        data["last_updated"] = (
+            self.last_updated.isoformat() if self.last_updated else None
+        )
         return json.dumps(data)
 
     def save(self) -> None:
         """Save or update satellite record in database."""
         from src.database import Database
+
         if self.id is not None:
             sql = "UPDATE satellites SET name=?, norad_id=?, category=?, tle_line1=?, tle_line2=?, tle_epoch=?, is_active=?, last_updated=? WHERE id=?"
-            params = (self.name, self.norad_id, self.category, self.tle_line1, self.tle_line2, self.tle_epoch, self.is_active, self.last_updated, self.id)
+            params = (
+                self.name,
+                self.norad_id,
+                self.category,
+                self.tle_line1,
+                self.tle_line2,
+                self.tle_epoch,
+                self.is_active,
+                self.last_updated,
+                self.id,
+            )
         else:
             sql = "INSERT INTO satellites (name, norad_id, category, tle_line1, tle_line2, tle_epoch, is_active, last_updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-            params = (self.name, self.norad_id, self.category, self.tle_line1, self.tle_line2, self.tle_epoch, self.is_active, self.last_updated)
+            params = (
+                self.name,
+                self.norad_id,
+                self.category,
+                self.tle_line1,
+                self.tle_line2,
+                self.tle_epoch,
+                self.is_active,
+                self.last_updated,
+            )
         Database.execute_query(sql, params)
 
     def delete(self) -> None:
         """Delete satellite record from database."""
         from src.database import Database
+
         sql = "DELETE FROM satellites WHERE id=?"
         Database.execute_query(sql, (self.id,))
 
@@ -129,6 +168,7 @@ class Satellite:
             Optional[Satellite]: Satellite instance or None.
         """
         from src.database import Database
+
         sql = "SELECT * FROM satellites WHERE id=?"
         res = Database.fetch_one(sql, (sat_id,))
         if res:
@@ -146,6 +186,7 @@ class Satellite:
             Optional[Satellite]: Satellite instance or None.
         """
         from src.database import Database
+
         sql = "SELECT * FROM satellites WHERE norad_id=?"
         res = Database.fetch_one(sql, (norad_id,))
         if res:
@@ -153,7 +194,7 @@ class Satellite:
         return None
 
     @classmethod
-    def find_by_category(cls, category: str) -> List["Satellite"]:
+    def find_by_category(cls, category: str) -> list["Satellite"]:
         """Find satellites by category.
 
         Args:
@@ -163,23 +204,25 @@ class Satellite:
             List[Satellite]: List of matching Satellite instances.
         """
         from src.database import Database
+
         sql = "SELECT * FROM satellites WHERE category=?"
         rows = Database.fetch_all(sql, (category,))
         return [cls(**dict(row)) for row in rows] if rows else []
 
     @classmethod
-    def find_active(cls) -> List["Satellite"]:
+    def find_active(cls) -> list["Satellite"]:
         """Find all active satellites.
 
         Returns:
             List[Satellite]: List of active Satellite instances.
         """
         from src.database import Database
+
         sql = "SELECT * FROM satellites WHERE is_active = True"
         rows = Database.fetch_all(sql)
         return [cls(**dict(row)) for row in rows] if rows else []
 
-    def update_tle_data(self, new_tle_data: Dict[str, Any]) -> None:
+    def update_tle_data(self, new_tle_data: dict[str, Any]) -> None:
         """Update TLE lines and epoch for satellite.
 
         Args:
@@ -203,7 +246,7 @@ class Satellite:
         ref = self.last_updated or self.tle_epoch
         return utcnow() - ref < timedelta(hours=max_age_hours)
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         """Check equality based on ID or NORAD ID."""
         if not isinstance(other, Satellite):
             return False

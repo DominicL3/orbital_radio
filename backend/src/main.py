@@ -1,8 +1,9 @@
 """FastAPI application entry point for Orbital Radio backend."""
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import AsyncGenerator, Dict, Any
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -45,7 +46,7 @@ app.include_router(auth_router)
 
 
 @app.get("/health")
-def health_check() -> Dict[str, Any]:
+def health_check() -> dict[str, Any]:
     """Basic health check endpoint.
 
     Returns:

@@ -1,14 +1,15 @@
 """Unit tests for the background task scheduler."""
 
+from unittest.mock import MagicMock, PropertyMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock, PropertyMock
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from src.scheduler import (
     cleanup_auth_sessions_job,
-    scheduler,
-    refresh_tle_data_job,
     init_scheduler,
+    refresh_tle_data_job,
+    scheduler,
     stop_scheduler,
 )
 

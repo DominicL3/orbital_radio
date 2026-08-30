@@ -1,7 +1,8 @@
 """Unit tests for FastAPI main application."""
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 from fastapi.testclient import TestClient
 
 from src.main import app
@@ -38,9 +39,11 @@ def test_cors_middleware(client: TestClient) -> None:
 @pytest.mark.asyncio
 async def test_lifespan_events() -> None:
     """Test lifespan context manager triggers startup and shutdown functions."""
-    with patch("src.main.init_database") as mock_init_db, patch(
-        "src.main.init_scheduler"
-    ) as mock_init_sch, patch("src.main.stop_scheduler") as mock_stop_sch:
+    with (
+        patch("src.main.init_database") as mock_init_db,
+        patch("src.main.init_scheduler") as mock_init_sch,
+        patch("src.main.stop_scheduler") as mock_stop_sch,
+    ):
         patch.object(mock_init_sch.return_value, "start").start()
 
         with TestClient(app):
@@ -48,4 +51,3 @@ async def test_lifespan_events() -> None:
             mock_init_sch.assert_called_once()
 
         mock_stop_sch.assert_called_once()
-

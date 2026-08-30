@@ -2,14 +2,15 @@
 Shared test fixtures and configuration for core module tests.
 """
 
-import pytest
 from datetime import datetime, timedelta
-from typing import Dict, Any, List
+from typing import Any
 from unittest.mock import Mock
+
+import pytest
 
 
 @pytest.fixture
-def mock_tle_data() -> Dict[str, Any]:
+def mock_tle_data() -> dict[str, Any]:
     """Mock TLE data for testing satellite tracking functionality."""
     return {
         "satellite_name": "ISS (ZARYA)",
@@ -27,7 +28,7 @@ def mock_tle_data() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def mock_orbital_elements() -> Dict[str, Any]:
+def mock_orbital_elements() -> dict[str, Any]:
     """Mock orbital elements for testing."""
     return {
         "inclination": 51.6461,
@@ -41,7 +42,7 @@ def mock_orbital_elements() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def mock_position_data() -> List[Dict[str, Any]]:
+def mock_position_data() -> list[dict[str, Any]]:
     """Mock position data for satellite tracking tests."""
     return [
         {
@@ -66,7 +67,7 @@ def mock_position_data() -> List[Dict[str, Any]]:
 
 
 @pytest.fixture
-def mock_geographic_region() -> Dict[str, Any]:
+def mock_geographic_region() -> dict[str, Any]:
     """Mock geographic region data for testing."""
     return {
         "country_code": "US",
@@ -79,7 +80,7 @@ def mock_geographic_region() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def mock_spotify_tracks() -> List[Dict[str, Any]]:
+def mock_spotify_tracks() -> list[dict[str, Any]]:
     """Mock Spotify track data for playlist testing."""
     return [
         {
@@ -122,7 +123,7 @@ def mock_spotify_tracks() -> List[Dict[str, Any]]:
 
 
 @pytest.fixture
-def mock_user_tokens() -> Dict[str, Any]:
+def mock_user_tokens() -> dict[str, Any]:
     """Mock Spotify user tokens for authentication tests."""
     return {
         "access_token": "BQC4liRpFVf9b37PRdqMAZBylPxkjIhNAXQBSBhN3wWgAJhWHEKMvfCe8pQhCt8dLjgLDCvHQaEqYKmOF7cJrfGKQ-rIEDr-1nP0_oIoXXOZmLnXOdTgGUlJvpj5lfX3mZmK7rJ7qgNKKuMNzxA",
@@ -134,7 +135,7 @@ def mock_user_tokens() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def mock_user_profile() -> Dict[str, Any]:
+def mock_user_profile() -> dict[str, Any]:
     """Mock Spotify user profile for testing."""
     return {
         "id": "test_user_123",
@@ -148,7 +149,7 @@ def mock_user_profile() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def mock_session_data() -> Dict[str, Any]:
+def mock_session_data() -> dict[str, Any]:
     """Mock session data for testing."""
     return {
         "session_id": "test_session_123",
@@ -186,7 +187,7 @@ NOAA 18
 
 
 @pytest.fixture
-def mock_spotify_search_response() -> Dict[str, Any]:
+def mock_spotify_search_response() -> dict[str, Any]:
     """Mock Spotify search API response."""
     return {
         "tracks": {
@@ -212,7 +213,7 @@ def mock_spotify_search_response() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def mock_spotify_playlist_response() -> Dict[str, Any]:
+def mock_spotify_playlist_response() -> dict[str, Any]:
     """Mock Spotify playlist API response."""
     return {
         "playlists": {
@@ -272,7 +273,7 @@ def played_tracks_set() -> set:
 
 
 @pytest.fixture
-def mock_country_codes() -> List[str]:
+def mock_country_codes() -> list[str]:
     """Mock list of country codes for testing."""
     return ["US", "CA", "GB", "FR", "DE", "JP", "AU", "BR", "IN", "MX"]
 
@@ -290,7 +291,7 @@ def mock_land_coordinates() -> tuple:
 
 
 @pytest.fixture
-def mock_satellite_data() -> Dict[str, Any]:
+def mock_satellite_data() -> dict[str, Any]:
     """Mock satellite data for database tests."""
     return {
         "id": 1,

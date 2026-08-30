@@ -1,12 +1,13 @@
 """Test cases for Spotify API client."""
 
+from typing import Any
 from unittest.mock import Mock, patch
-from typing import Dict, Any
+
 import pytest
 
 
 @pytest.fixture
-def mock_spotify_tokens() -> Dict[str, Any]:
+def mock_spotify_tokens() -> dict[str, Any]:
     """Mock Spotify OAuth tokens."""
     return {
         "access_token": "test_access_token",
@@ -18,7 +19,7 @@ def mock_spotify_tokens() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def mock_user_profile() -> Dict[str, Any]:
+def mock_user_profile() -> dict[str, Any]:
     """Mock Spotify user profile."""
     return {
         "id": "test_user_123",
@@ -31,7 +32,7 @@ def mock_user_profile() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def mock_playlist_response() -> Dict[str, Any]:
+def mock_playlist_response() -> dict[str, Any]:
     """Mock Spotify playlist search response."""
     return {
         "playlists": {
@@ -50,7 +51,7 @@ def mock_playlist_response() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def mock_tracks_response() -> Dict[str, Any]:
+def mock_tracks_response() -> dict[str, Any]:
     """Mock Spotify tracks response."""
     return {
         "items": [
@@ -92,7 +93,7 @@ class TestSpotifyClient:
 
     @patch("requests.post")
     def test_authenticate_user_success(
-        self, mock_post: Mock, mock_spotify_tokens: Dict[str, Any]
+        self, mock_post: Mock, mock_spotify_tokens: dict[str, Any]
     ) -> None:
         """Should successfully exchange authorization code for tokens."""
         from src.core.spotify_client import SpotifyClient
@@ -133,7 +134,7 @@ class TestSpotifyClient:
 
     @patch("requests.get")
     def test_get_user_profile_success(
-        self, mock_get: Mock, mock_user_profile: Dict[str, Any]
+        self, mock_get: Mock, mock_user_profile: dict[str, Any]
     ) -> None:
         """Should fetch user profile successfully."""
         from src.core.spotify_client import SpotifyClient
@@ -174,8 +175,8 @@ class TestSpotifyClient:
     def test_search_country_playlists_success(
         self,
         mock_get: Mock,
-        mock_playlist_response: Dict[str, Any],
-        mock_tracks_response: Dict[str, Any],
+        mock_playlist_response: dict[str, Any],
+        mock_tracks_response: dict[str, Any],
     ) -> None:
         """Should search and return country playlists."""
         from src.core.spotify_client import SpotifyClient
@@ -247,7 +248,7 @@ class TestSpotifyClient:
 
     @patch("requests.post")
     def test_refresh_user_token_success(
-        self, mock_post: Mock, mock_spotify_tokens: Dict[str, Any]
+        self, mock_post: Mock, mock_spotify_tokens: dict[str, Any]
     ) -> None:
         """Should refresh access token successfully."""
         from src.core.spotify_client import SpotifyClient

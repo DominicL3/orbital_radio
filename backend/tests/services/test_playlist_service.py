@@ -1,16 +1,16 @@
 """Test cases for playlist service."""
 
-from unittest.mock import Mock, patch
-from typing import Dict, Any
 from datetime import timedelta
-
-from src.config import utcnow
+from typing import Any
+from unittest.mock import Mock, patch
 
 import pytest
 
+from src.config import utcnow
+
 
 @pytest.fixture
-def mock_track() -> Dict[str, Any]:
+def mock_track() -> dict[str, Any]:
     """Mock track data."""
     return {
         "id": "track_123",
@@ -24,7 +24,7 @@ def mock_track() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def mock_orbital_session() -> Dict[str, Any]:
+def mock_orbital_session() -> dict[str, Any]:
     """Mock orbital session data."""
     return {
         "session_id": "session_123",
@@ -65,8 +65,8 @@ class TestPlaylistService:
         self,
         mock_get_position: Mock,
         mock_get_next: Mock,
-        mock_track: Dict[str, Any],
-        mock_orbital_session: Dict[str, Any],
+        mock_track: dict[str, Any],
+        mock_orbital_session: dict[str, Any],
     ) -> None:
         """Should get next track based on current satellite position."""
         from src.services.playlist_service import PlaylistService
@@ -102,7 +102,7 @@ class TestPlaylistService:
 
     @patch("src.core.playlist_generator.GeographicPlaylistGenerator.get_previous_track")
     def test_get_previous_track_success(
-        self, mock_get_previous: Mock, mock_orbital_session: Dict[str, Any]
+        self, mock_get_previous: Mock, mock_orbital_session: dict[str, Any]
     ) -> None:
         """Should get previous track from session history."""
         from src.services.playlist_service import PlaylistService
@@ -127,7 +127,7 @@ class TestPlaylistService:
             mock_get_previous.assert_called_once_with("session_123")
 
     def test_get_previous_track_no_history(
-        self, mock_orbital_session: Dict[str, Any]
+        self, mock_orbital_session: dict[str, Any]
     ) -> None:
         """Should handle case when no previous track exists."""
         from src.services.playlist_service import PlaylistService
@@ -137,56 +137,62 @@ class TestPlaylistService:
 
         service = PlaylistService()
 
-        with patch.object(
-            service.cache_service, "get_session", return_value=session_no_history
-        ):
-            with patch.object(
+        with (
+            patch.object(
+                service.cache_service, "get_session", return_value=session_no_history
+            ),
+            patch.object(
                 service.playlist_generator, "get_previous_track", return_value=None
-            ):
-                track = service.get_previous_track("session_123")
+            ),
+        ):
+            track = service.get_previous_track("session_123")
 
-                assert track is None
+            assert track is None
 
-    def test_mark_track_as_played(self, mock_orbital_session: Dict[str, Any]) -> None:
+    def test_mark_track_as_played(self, mock_orbital_session: dict[str, Any]) -> None:
         """Should mark track as played and update session."""
         from src.services.playlist_service import PlaylistService
 
         service = PlaylistService()
 
-        with patch.object(
-            service.cache_service, "get_session", return_value=mock_orbital_session
+        with (
+            patch.object(
+                service.cache_service, "get_session", return_value=mock_orbital_session
+            ),
+            patch.object(service.cache_service, "update_session") as mock_update,
         ):
-            with patch.object(service.cache_service, "update_session") as mock_update:
-                service.mark_track_as_played("session_123", "track_123")
+            service.mark_track_as_played("session_123", "track_123")
 
-                mock_update.assert_called_once()
-                call_args = mock_update.call_args[0]
-                assert call_args[0] == "session_123"
-                assert "track_123" in call_args[1]["played_tracks"]
+            mock_update.assert_called_once()
+            call_args = mock_update.call_args[0]
+            assert call_args[0] == "session_123"
+            assert "track_123" in call_args[1]["played_tracks"]
 
     def test_mark_track_as_played_duplicate(
-        self, mock_orbital_session: Dict[str, Any]
+        self, mock_orbital_session: dict[str, Any]
     ) -> None:
         """Should handle marking same track as played multiple times."""
         from src.services.playlist_service import PlaylistService
 
         service = PlaylistService()
 
-        with patch.object(
-            service.cache_service, "get_session", return_value=mock_orbital_session
+        with (
+            patch.object(
+                service.cache_service, "get_session", return_value=mock_orbital_session
+            ),
+            patch.object(service.cache_service, "update_session") as mock_update,
         ):
-            with patch.object(service.cache_service, "update_session") as mock_update:
-                # Mark track that's already in played_tracks
-                service.mark_track_as_played("session_123", "track_1")
+            # Mark track that's already in played_tracks
+            service.mark_track_as_played("session_123", "track_1")
 
-                # Should still update session (idempotent operation)
-                mock_update.assert_called_once()
+            # Should still update session (idempotent operation)
+            mock_update.assert_called_once()
 
     @patch(
         "src.core.playlist_generator.GeographicPlaylistGenerator.get_region_top_50_tracks"
     )
     def test_generate_orbital_playlist(
-        self, mock_get_tracks: Mock, mock_orbital_session: Dict[str, Any]
+        self, mock_get_tracks: Mock, mock_orbital_session: dict[str, Any]
     ) -> None:
         """Should generate playlist for orbital session."""
         from src.services.playlist_service import PlaylistService
@@ -238,25 +244,25 @@ class TestPlaylistService:
 class TestPlaybackPositionManagement:
     """Test playback position management."""
 
-    def test_set_playback_position(self, mock_orbital_session: Dict[str, Any]) -> None:
+    def test_set_playback_position(self, mock_orbital_session: dict[str, Any]) -> None:
         """Should set playback position for track."""
         from src.services.playlist_service import PlaylistService
 
         service = PlaylistService()
 
-        with patch.object(
-            service.cache_service, "get_session", return_value=mock_orbital_session
+        with (
+            patch.object(
+                service.cache_service, "get_session", return_value=mock_orbital_session
+            ),
+            patch.object(service.cache_service, "update_session") as mock_update,
         ):
-            with patch.object(service.cache_service, "update_session") as mock_update:
-                service.set_playback_position(
-                    "session_123", "track_123", 60000
-                )  # 1 minute
+            service.set_playback_position("session_123", "track_123", 60000)  # 1 minute
 
-                mock_update.assert_called_once()
-                call_args = mock_update.call_args[0]
-                assert call_args[1]["playback_position"]["track_123"] == 60000
+            mock_update.assert_called_once()
+            call_args = mock_update.call_args[0]
+            assert call_args[1]["playback_position"]["track_123"] == 60000
 
-    def test_get_playback_position(self, mock_orbital_session: Dict[str, Any]) -> None:
+    def test_get_playback_position(self, mock_orbital_session: dict[str, Any]) -> None:
         """Should get playback position for track."""
         from src.services.playlist_service import PlaylistService
 
@@ -270,7 +276,7 @@ class TestPlaybackPositionManagement:
             assert position == 45000  # From fixture
 
     def test_get_playback_position_not_found(
-        self, mock_orbital_session: Dict[str, Any]
+        self, mock_orbital_session: dict[str, Any]
     ) -> None:
         """Should return 0 for track with no saved position."""
         from src.services.playlist_service import PlaylistService
@@ -285,28 +291,30 @@ class TestPlaybackPositionManagement:
             assert position == 0
 
     def test_clear_playback_position(
-        self, mock_orbital_session: Dict[str, Any]
+        self, mock_orbital_session: dict[str, Any]
     ) -> None:
         """Should clear playback position for track."""
         from src.services.playlist_service import PlaylistService
 
         service = PlaylistService()
 
-        with patch.object(
-            service.cache_service, "get_session", return_value=mock_orbital_session
+        with (
+            patch.object(
+                service.cache_service, "get_session", return_value=mock_orbital_session
+            ),
+            patch.object(service.cache_service, "update_session") as mock_update,
         ):
-            with patch.object(service.cache_service, "update_session") as mock_update:
-                service.clear_playback_position("session_123", "track_2")
+            service.clear_playback_position("session_123", "track_2")
 
-                mock_update.assert_called_once()
-                call_args = mock_update.call_args[0]
-                assert "track_2" not in call_args[1]["playback_position"]
+            mock_update.assert_called_once()
+            call_args = mock_update.call_args[0]
+            assert "track_2" not in call_args[1]["playback_position"]
 
 
 class TestTrackHistoryManagement:
     """Test track history management."""
 
-    def test_add_to_track_history(self, mock_orbital_session: Dict[str, Any]) -> None:
+    def test_add_to_track_history(self, mock_orbital_session: dict[str, Any]) -> None:
         """Should add track to session history."""
         from src.services.playlist_service import PlaylistService
 
@@ -314,20 +322,22 @@ class TestTrackHistoryManagement:
 
         new_track = {"id": "track_new", "name": "New Song", "duration_ms": 195000}
 
-        with patch.object(
-            service.cache_service, "get_session", return_value=mock_orbital_session
+        with (
+            patch.object(
+                service.cache_service, "get_session", return_value=mock_orbital_session
+            ),
+            patch.object(service.cache_service, "update_session") as mock_update,
         ):
-            with patch.object(service.cache_service, "update_session") as mock_update:
-                service.add_to_track_history("session_123", new_track)
+            service.add_to_track_history("session_123", new_track)
 
-                mock_update.assert_called_once()
-                call_args = mock_update.call_args[0]
-                history = call_args[1]["track_history"]
-                assert history[-1]["id"] == "track_new"
-                assert "timestamp" in history[-1]
+            mock_update.assert_called_once()
+            call_args = mock_update.call_args[0]
+            history = call_args[1]["track_history"]
+            assert history[-1]["id"] == "track_new"
+            assert "timestamp" in history[-1]
 
     def test_track_history_size_limit(
-        self, mock_orbital_session: Dict[str, Any]
+        self, mock_orbital_session: dict[str, Any]
     ) -> None:
         """Should limit track history size to prevent memory issues."""
         from src.services.playlist_service import PlaylistService
@@ -341,19 +351,21 @@ class TestTrackHistoryManagement:
         ]
         session_large_history = {**mock_orbital_session, "track_history": large_history}
 
-        with patch.object(
-            service.cache_service, "get_session", return_value=session_large_history
+        with (
+            patch.object(
+                service.cache_service, "get_session", return_value=session_large_history
+            ),
+            patch.object(service.cache_service, "update_session") as mock_update,
         ):
-            with patch.object(service.cache_service, "update_session") as mock_update:
-                new_track = {"id": "track_new", "name": "New Song"}
-                service.add_to_track_history("session_123", new_track)
+            new_track = {"id": "track_new", "name": "New Song"}
+            service.add_to_track_history("session_123", new_track)
 
-                call_args = mock_update.call_args[0]
-                history = call_args[1]["track_history"]
-                # Should limit history size (e.g., max 100 items)
-                assert len(history) <= 100
+            call_args = mock_update.call_args[0]
+            history = call_args[1]["track_history"]
+            # Should limit history size (e.g., max 100 items)
+            assert len(history) <= 100
 
-    def test_get_track_history(self, mock_orbital_session: Dict[str, Any]) -> None:
+    def test_get_track_history(self, mock_orbital_session: dict[str, Any]) -> None:
         """Should return track history for session."""
         from src.services.playlist_service import PlaylistService
 
@@ -369,7 +381,7 @@ class TestTrackHistoryManagement:
             assert history[1]["id"] == "track_2"
 
     def test_get_track_history_with_limit(
-        self, mock_orbital_session: Dict[str, Any]
+        self, mock_orbital_session: dict[str, Any]
     ) -> None:
         """Should return limited track history."""
         from src.services.playlist_service import PlaylistService
@@ -515,7 +527,7 @@ class TestTrackDeduplication:
         assert "track_new_2" in track_ids
         assert "track_5000" not in track_ids
 
-    def test_played_tracks_cleanup(self, mock_orbital_session: Dict[str, Any]) -> None:
+    def test_played_tracks_cleanup(self, mock_orbital_session: dict[str, Any]) -> None:
         """Should clean up large played tracks sets periodically."""
         from src.services.playlist_service import PlaylistService
 
@@ -528,16 +540,18 @@ class TestTrackDeduplication:
             "played_tracks": large_played_set,
         }
 
-        with patch.object(
-            service.cache_service, "get_session", return_value=session_large_played
+        with (
+            patch.object(
+                service.cache_service, "get_session", return_value=session_large_played
+            ),
+            patch.object(service.cache_service, "update_session") as mock_update,
         ):
-            with patch.object(service.cache_service, "update_session") as mock_update:
-                service.cleanup_played_tracks("session_123", max_size=500)
+            service.cleanup_played_tracks("session_123", max_size=500)
 
-                mock_update.assert_called_once()
-                call_args = mock_update.call_args[0]
-                # Should reduce played tracks set size
-                assert len(call_args[1]["played_tracks"]) <= 500
+            mock_update.assert_called_once()
+            call_args = mock_update.call_args[0]
+            # Should reduce played tracks set size
+            assert len(call_args[1]["played_tracks"]) <= 500
 
 
 class TestErrorHandling:
@@ -571,18 +585,20 @@ class TestErrorHandling:
             "played_tracks": set(),
         }
 
-        with patch.object(
-            service.cache_service, "get_session", return_value=mock_session
-        ):
-            with patch.object(
+        with (
+            patch.object(
+                service.cache_service, "get_session", return_value=mock_session
+            ),
+            patch.object(
                 service.satellite_service,
                 "get_current_satellite_position",
                 side_effect=Exception("Position calc error"),
-            ):
-                with pytest.raises(Exception) as exc_info:
-                    service.get_next_track("session_123")
+            ),
+        ):
+            with pytest.raises(Exception) as exc_info:
+                service.get_next_track("session_123")
 
-                assert "Position calc error" in str(exc_info.value)
+            assert "Position calc error" in str(exc_info.value)
 
     def test_session_corruption_handling(self) -> None:
         """Should handle corrupted session data."""
@@ -624,18 +640,20 @@ class TestErrorHandling:
             "played_tracks": set(),
         }
 
-        with patch.object(
-            service.cache_service, "get_session", return_value=mock_session
-        ):
-            with patch.object(
+        with (
+            patch.object(
+                service.cache_service, "get_session", return_value=mock_session
+            ),
+            patch.object(
                 service.satellite_service,
                 "get_current_satellite_position",
                 side_effect=ConnectionError("Network down"),
-            ):
-                with pytest.raises(Exception) as exc_info:
-                    service.get_next_track("session_123")
+            ),
+        ):
+            with pytest.raises(Exception) as exc_info:
+                service.get_next_track("session_123")
 
-                assert (
-                    "Network down" in str(exc_info.value)
-                    or "connection" in str(exc_info.value).lower()
-                )
+            assert (
+                "Network down" in str(exc_info.value)
+                or "connection" in str(exc_info.value).lower()
+            )

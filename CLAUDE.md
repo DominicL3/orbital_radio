@@ -632,9 +632,23 @@ uv run pytest
 # Run linter
 uv run ruff check .
 
+# Verify formatting
+uv run ruff format --check .
+
 # Add a new dependency
 uv add <package-name>
 
 # Add a development dependency
 uv add --dev <package-name>
 ```
+
+### Required Final Code-Quality Check
+
+After every backend code change, run both commands from `backend/` before considering the work complete:
+
+```bash
+uv run ruff check .
+uv run ruff format --check .
+```
+
+Prefer to resolve Ruff findings in the code rather than suppressing them with `# noqa`, otherwise alert user to the issue.

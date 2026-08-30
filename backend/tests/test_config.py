@@ -29,21 +29,28 @@ def test_settings_defaults() -> None:
 
 def test_settings_production_requires_strong_secret() -> None:
     """Production environment requires a non-default secret key of at least 32 chars."""
-    with patch.dict(
-        "os.environ",
-        {"ENVIRONMENT": "production", "SECRET_KEY": "dev-secret-change-in-production"},
-        clear=True,
+    with (
+        patch.dict(
+            "os.environ",
+            {
+                "ENVIRONMENT": "production",
+                "SECRET_KEY": "dev-secret-change-in-production",
+            },
+            clear=True,
+        ),
+        pytest.raises(ValueError, match="strong SECRET_KEY"),
     ):
-        with pytest.raises(ValueError, match="strong SECRET_KEY"):
-            Settings()
+        Settings()
 
-    with patch.dict(
-        "os.environ",
-        {"ENVIRONMENT": "production", "SECRET_KEY": "too-short"},
-        clear=True,
+    with (
+        patch.dict(
+            "os.environ",
+            {"ENVIRONMENT": "production", "SECRET_KEY": "too-short"},
+            clear=True,
+        ),
+        pytest.raises(ValueError, match="strong SECRET_KEY"),
     ):
-        with pytest.raises(ValueError, match="strong SECRET_KEY"):
-            Settings()
+        Settings()
 
     with patch.dict(
         "os.environ",
@@ -54,9 +61,7 @@ def test_settings_production_requires_strong_secret() -> None:
         clear=True,
     ):
         settings = Settings()
-        assert (
-            settings.secret_key == "a-sufficiently-long-production-secret-key-12345"
-        )
+        assert settings.secret_key == "a-sufficiently-long-production-secret-key-12345"
 
 
 def test_cors_origins_parsing() -> None:

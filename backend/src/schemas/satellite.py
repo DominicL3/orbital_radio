@@ -5,9 +5,9 @@ positions, geographic regions, orbit information, and satellite response objects
 """
 
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Union
-from pydantic import BaseModel, Field, field_validator, model_validator
+from typing import Any
 
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from src.config import get_settings, utcnow
 
@@ -16,12 +16,14 @@ class OrbitInfo(BaseModel):
     """Satellite orbit information schema."""
 
     altitude_km: float = Field(..., ge=0, description="Altitude in kilometers")
-    inclination_deg: float = Field(..., ge=0, le=180, description="Inclination in degrees")
+    inclination_deg: float = Field(
+        ..., ge=0, le=180, description="Inclination in degrees"
+    )
     period_minutes: float = Field(..., gt=0, description="Orbital period in minutes")
     eccentricity: float = Field(..., ge=0, le=1, description="Orbital eccentricity")
-    perigee_km: Optional[float] = Field(None, ge=0, description="Perigee in kilometers")
-    apogee_km: Optional[float] = Field(None, ge=0, description="Apogee in kilometers")
-    orbit_type: Optional[str] = Field(None, description="Type of orbit")
+    perigee_km: float | None = Field(None, ge=0, description="Perigee in kilometers")
+    apogee_km: float | None = Field(None, ge=0, description="Apogee in kilometers")
+    orbit_type: str | None = Field(None, description="Type of orbit")
 
     @property
     def orbital_velocity_km_s(self) -> float:
@@ -47,18 +49,24 @@ class TLEData(BaseModel):
     inclination: float = Field(default=0.0, description="Inclination in degrees")
     raan: float = Field(default=0.0, description="Right Ascension of Ascending Node")
     eccentricity: float = Field(default=0.0, description="Orbital eccentricity")
-    arg_perigee: float = Field(default=0.0, description="Argument of perigee in degrees")
+    arg_perigee: float = Field(
+        default=0.0, description="Argument of perigee in degrees"
+    )
     mean_anomaly: float = Field(default=0.0, description="Mean anomaly in degrees")
-    mean_motion: float = Field(default=0.0, description="Mean motion in revolutions per day")
+    mean_motion: float = Field(
+        default=0.0, description="Mean motion in revolutions per day"
+    )
 
     # Compatibility fields for test fixtures and alternate API schemas
-    satellite_id: Optional[Any] = Field(None, description="Satellite identifier")
-    tle_line1: Optional[str] = Field(None, description="Line 1 alias")
-    tle_line2: Optional[str] = Field(None, description="Line 2 alias")
-    is_fresh: Optional[bool] = Field(True, description="Freshness status")
-    last_updated: Optional[datetime] = Field(None, description="Last updated timestamp")
-    name: Optional[str] = Field(None, description="Name alias")
-    orbital_elements: Optional[Dict[str, Any]] = Field(None, description="Orbital elements dictionary")
+    satellite_id: Any | None = Field(None, description="Satellite identifier")
+    tle_line1: str | None = Field(None, description="Line 1 alias")
+    tle_line2: str | None = Field(None, description="Line 2 alias")
+    is_fresh: bool | None = Field(True, description="Freshness status")
+    last_updated: datetime | None = Field(None, description="Last updated timestamp")
+    name: str | None = Field(None, description="Name alias")
+    orbital_elements: dict[str, Any] | None = Field(
+        None, description="Orbital elements dictionary"
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -90,7 +98,7 @@ class TLEData(BaseModel):
 
     @field_validator("line1", "tle_line1", mode="after")
     @classmethod
-    def validate_line1(cls, v: Optional[str]) -> Optional[str]:
+    def validate_line1(cls, v: str | None) -> str | None:
         """Validate line 1 format.
 
         Args:
@@ -108,7 +116,7 @@ class TLEData(BaseModel):
 
     @field_validator("line2", "tle_line2", mode="after")
     @classmethod
-    def validate_line2(cls, v: Optional[str]) -> Optional[str]:
+    def validate_line2(cls, v: str | None) -> str | None:
         """Validate line 2 format.
 
         Args:
@@ -142,7 +150,9 @@ class TLEData(BaseModel):
         if v > now + timedelta(days=1):
             raise ValueError("Epoch cannot be in the future")
         age = now - v
-        if timedelta(days=300) <= age <= timedelta(days=400) or age > timedelta(days=3650):
+        if timedelta(days=300) <= age <= timedelta(days=400) or age > timedelta(
+            days=3650
+        ):
             raise ValueError("Epoch is too old")
         return v
 
@@ -165,7 +175,9 @@ class OrbitalElements(BaseModel):
     inclination: float = Field(..., description="Inclination in degrees")
     raan: float = Field(..., description="Right Ascension of Ascending Node in degrees")
     eccentricity: float = Field(..., description="Eccentricity")
-    arg_perigee: float = Field(default=0.0, description="Argument of perigee in degrees")
+    arg_perigee: float = Field(
+        default=0.0, description="Argument of perigee in degrees"
+    )
     mean_anomaly: float = Field(..., description="Mean anomaly in degrees")
     mean_motion: float = Field(..., description="Mean motion in revolutions per day")
     epoch: datetime = Field(..., description="Epoch timestamp")
@@ -209,8 +221,10 @@ class VisibilityInfo(BaseModel):
     elevation_deg: float = Field(..., ge=0, le=90, description="Elevation angle")
     azimuth_deg: float = Field(..., ge=0, le=360, description="Azimuth angle")
     range_km: float = Field(..., ge=0, description="Range in kilometers")
-    next_pass: Optional[datetime] = Field(None, description="Next pass timestamp")
-    pass_duration_seconds: Optional[int] = Field(None, description="Pass duration in seconds")
+    next_pass: datetime | None = Field(None, description="Next pass timestamp")
+    pass_duration_seconds: int | None = Field(
+        None, description="Pass duration in seconds"
+    )
 
 
 class SatellitePosition(BaseModel):
@@ -221,36 +235,40 @@ class SatellitePosition(BaseModel):
     latitude: float = Field(..., ge=-90, le=90, description="Latitude in degrees")
     longitude: float = Field(..., ge=-180, le=180, description="Longitude in degrees")
     altitude_km: float = Field(..., ge=0, description="Altitude in kilometers")
-    velocity_km_s: Optional[float] = Field(None, ge=0, description="Velocity in km/s")
-    visibility: Optional[VisibilityInfo] = Field(None, description="Visibility information")
+    velocity_km_s: float | None = Field(None, ge=0, description="Velocity in km/s")
+    visibility: VisibilityInfo | None = Field(
+        None, description="Visibility information"
+    )
 
 
 class GeographicRegion(BaseModel):
     """Geographic region model."""
 
-    country_code: Optional[str] = Field(None, description="ISO country code")
+    country_code: str | None = Field(None, description="ISO country code")
     country_name: str = Field(..., description="Country or region name")
     region_type: str = Field(default="country", description="Region type")
-    region: Optional[str] = Field(None, description="Sub-region name")
-    continent: Optional[str] = Field(None, description="Continent name")
+    region: str | None = Field(None, description="Sub-region name")
+    continent: str | None = Field(None, description="Continent name")
     is_ocean: bool = Field(default=False, description="Ocean status")
-    closest_country: Optional[str] = Field(None, description="Closest country code if ocean")
+    closest_country: str | None = Field(
+        None, description="Closest country code if ocean"
+    )
 
 
 class SatelliteResponse(BaseModel):
     """Satellite response schema."""
 
-    id: Optional[Union[int, str]] = Field(None, description="Satellite identifier")
+    id: int | str | None = Field(None, description="Satellite identifier")
     name: str = Field(..., min_length=1, description="Satellite name")
     norad_id: int = Field(..., ge=1, le=99999, description="NORAD catalog ID")
     category: str = Field(..., description="Satellite category")
-    description: Optional[str] = Field(None, description="Satellite description")
-    tle_line1: Optional[str] = Field(None, description="Line 1 of TLE")
-    tle_line2: Optional[str] = Field(None, description="Line 2 of TLE")
-    tle_epoch: Optional[datetime] = Field(None, description="Epoch of TLE")
+    description: str | None = Field(None, description="Satellite description")
+    tle_line1: str | None = Field(None, description="Line 1 of TLE")
+    tle_line2: str | None = Field(None, description="Line 2 of TLE")
+    tle_epoch: datetime | None = Field(None, description="Epoch of TLE")
     is_active: bool = Field(default=True, description="Active status")
-    orbit_info: Optional[OrbitInfo] = Field(None, description="Orbit information")
-    last_updated: Optional[datetime] = Field(None, description="Last updated timestamp")
+    orbit_info: OrbitInfo | None = Field(None, description="Orbit information")
+    last_updated: datetime | None = Field(None, description="Last updated timestamp")
 
     @field_validator("category")
     @classmethod
@@ -274,9 +292,11 @@ class SatelliteResponse(BaseModel):
 class SatelliteListResponse(BaseModel):
     """Satellite list response schema."""
 
-    satellites: List[SatelliteResponse] = Field(default_factory=list, description="List of satellites")
+    satellites: list[SatelliteResponse] = Field(
+        default_factory=list, description="List of satellites"
+    )
     total: int = Field(default=0, description="Total count")
-    total_count: Optional[int] = Field(None, description="Total count alias")
+    total_count: int | None = Field(None, description="Total count alias")
 
     @model_validator(mode="after")
     def sync_total_count(self) -> "SatelliteListResponse":

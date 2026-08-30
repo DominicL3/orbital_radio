@@ -2,17 +2,18 @@
 
 from datetime import datetime, timedelta
 from typing import Any
+
 from fastapi import APIRouter, Depends, Query, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
 from src.config import utcnow
-from src.services.satellite_service import SatelliteService
 from src.schemas.satellite import (
-    SatelliteResponse,
     SatelliteListResponse,
+    SatelliteResponse,
     TLEData,
 )
+from src.services.satellite_service import SatelliteService
 
 
 def get_satellite_service() -> SatelliteService:
@@ -22,6 +23,7 @@ def get_satellite_service() -> SatelliteService:
         SatelliteService: Service instance.
     """
     from src.services.satellite_service import SatelliteService
+
     return SatelliteService()
 
 
@@ -70,7 +72,9 @@ def list_satellites(
         paginated = service.get_satellites_paginated(page, page_size)
         if include_freshness:
             paginated["data_freshness"] = service.get_data_freshness()
-        return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(paginated))
+        return JSONResponse(
+            status_code=status.HTTP_200_OK, content=jsonable_encoder(paginated)
+        )
 
     if search:
         satellites = service.search_satellites_by_name(search)
@@ -85,7 +89,9 @@ def list_satellites(
     if include_freshness:
         content["data_freshness"] = service.get_data_freshness()
 
-    return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(content))
+    return JSONResponse(
+        status_code=status.HTTP_200_OK, content=jsonable_encoder(content)
+    )
 
 
 @router.get("/{satellite_id}/tle", response_model=TLEData)
@@ -111,7 +117,7 @@ def get_satellite_tle(
     except Exception as e:
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"error": f"Failed to fetch TLE data: {str(e)}"},
+            content={"error": f"Failed to fetch TLE data: {e!s}"},
         )
 
     if tle is None:
@@ -173,12 +179,12 @@ def get_satellite_positions(
     except ValueError as e:
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            content={"error": f"TLE data unavailable: {str(e)}"},
+            content={"error": f"TLE data unavailable: {e!s}"},
         )
     except RuntimeError as e:
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"error": f"Orbital calculation error: {str(e)}"},
+            content={"error": f"Orbital calculation error: {e!s}"},
         )
     except Exception as e:
         return JSONResponse(
@@ -190,9 +196,7 @@ def get_satellite_positions(
     for pos in positions:
         pos_list.append(jsonable_encoder(pos))
 
-    return JSONResponse(
-        status_code=status.HTTP_200_OK, content={"positions": pos_list}
-    )
+    return JSONResponse(status_code=status.HTTP_200_OK, content={"positions": pos_list})
 
 
 @router.get("/{satellite_id}/visibility")
@@ -253,7 +257,7 @@ def get_satellite_details(
     except ValueError as e:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
-            content={"error": f"Invalid satellite ID: {str(e)}"},
+            content={"error": f"Invalid satellite ID: {e!s}"},
         )
 
     if sat is None:

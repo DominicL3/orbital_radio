@@ -5,13 +5,14 @@ Tests cover TLE data fetching, caching, orbital calculations, position generatio
 and geographic region mapping with proper mocking of external dependencies.
 """
 
-import pytest
-from unittest.mock import Mock, patch
 from datetime import datetime, timedelta
+from unittest.mock import Mock, patch
+
+import pytest
 import requests
 
 from src.core.satellite_tracker import SatelliteTLEManager
-from src.schemas.satellite import TLEData, OrbitalElements, Position, GeographicRegion
+from src.schemas.satellite import GeographicRegion, OrbitalElements, Position, TLEData
 
 
 class TestSatelliteTLEManager:

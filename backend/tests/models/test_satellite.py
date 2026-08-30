@@ -1,7 +1,8 @@
 """Test cases for satellite database model."""
 
-from unittest.mock import patch
 from datetime import datetime, timedelta
+from unittest.mock import patch
+
 import pytest
 
 from src.config import utcnow
@@ -280,9 +281,9 @@ class TestSatelliteDatabaseOperations:
                 category="weather",
                 tle_line1="updated_tle1",
                 tle_line2="updated_tle2",
-                    tle_epoch=utcnow(),
+                tle_epoch=utcnow(),
                 is_active=False,
-                    last_updated=utcnow(),
+                last_updated=utcnow(),
             )
 
             satellite.save()
@@ -572,9 +573,9 @@ class TestSatelliteUtilityMethods:
             category="iss",
             tle_line1="tle1",
             tle_line2="tle2",
-                tle_epoch=utcnow(),
+            tle_epoch=utcnow(),
             is_active=True,
-                last_updated=utcnow(),
+            last_updated=utcnow(),
         )
 
         satellite2 = Satellite(
@@ -584,9 +585,9 @@ class TestSatelliteUtilityMethods:
             category="iss",
             tle_line1="tle1",
             tle_line2="tle2",
-                tle_epoch=utcnow(),
+            tle_epoch=utcnow(),
             is_active=True,
-                last_updated=utcnow(),
+            last_updated=utcnow(),
         )
 
         satellite3 = Satellite(
@@ -596,9 +597,9 @@ class TestSatelliteUtilityMethods:
             category="weather",
             tle_line1="tle1",
             tle_line2="tle2",
-                    tle_epoch=utcnow(),
+            tle_epoch=utcnow(),
             is_active=True,
-                    last_updated=utcnow(),
+            last_updated=utcnow(),
         )
 
         assert satellite1 == satellite2  # Same ID

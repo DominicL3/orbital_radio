@@ -7,7 +7,7 @@ from typing import Any
 import requests
 
 from src.config import get_settings
-from src.schemas.satellite import TLEData, OrbitalElements, Position, GeographicRegion
+from src.schemas.satellite import GeographicRegion, OrbitalElements, Position, TLEData
 from src.utils.exceptions import TLEDataError
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,11 @@ class SatelliteTLEManager:
             ValueError: If satellite_id is invalid.
             TLEDataError: If TLE fetching or parsing fails.
         """
-        if not satellite_id or not isinstance(satellite_id, str) or not satellite_id.strip():
+        if (
+            not satellite_id
+            or not isinstance(satellite_id, str)
+            or not satellite_id.strip()
+        ):
             raise ValueError("satellite_id must be a non-empty string")
 
         if self._is_tle_stale(satellite_id):
@@ -57,7 +61,9 @@ class SatelliteTLEManager:
                 cached = self.get_cached_tle(satellite_id)
                 if cached:
                     return cached
-                raise TLEDataError(f"Failed to fetch TLE data for {satellite_id}: {e}") from e
+                raise TLEDataError(
+                    f"Failed to fetch TLE data for {satellite_id}: {e}"
+                ) from e
 
         return self.get_cached_tle(satellite_id)
 
@@ -257,7 +263,6 @@ class SatelliteTLEManager:
         Args:
             days_to_keep: Maximum retention threshold in days.
         """
-        pass
 
     def _is_tle_stale(self, satellite_id: str) -> bool:
         """Check if TLE data for satellite is missing or stale according to settings."""
@@ -300,7 +305,7 @@ class SatelliteTLEManager:
                 Position(
                     timestamp=now + timedelta(minutes=i * 5),
                     latitude=min(90.0, max(-90.0, 40.0 + i * 0.5)),
-                    longitude=(( -74.0 + i * 0.5 + 180.0) % 360.0) - 180.0,
+                    longitude=((-74.0 + i * 0.5 + 180.0) % 360.0) - 180.0,
                     altitude=408.0,
                 )
             )

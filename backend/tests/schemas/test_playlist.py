@@ -2,10 +2,10 @@
 
 from datetime import datetime, timedelta
 
-from src.config import utcnow
-
 import pytest
 from pydantic import ValidationError
+
+from src.config import utcnow
 
 
 class TestPlaylistSchemas:
@@ -601,9 +601,7 @@ class TestPositionSchema:
         from src.schemas.playlist import Position
 
         # Valid coordinates
-        valid_position = Position(
-            latitude=45.0, longitude=-90.0, timestamp=utcnow()
-        )
+        valid_position = Position(latitude=45.0, longitude=-90.0, timestamp=utcnow())
         assert valid_position.latitude == 45.0
         assert valid_position.longitude == -90.0
 
@@ -630,11 +628,11 @@ class TestPlaylistSchemaIntegration:
     def test_complete_orbital_playlist_creation(self) -> None:
         """Should create complete orbital playlist with all components."""
         from src.schemas.playlist import (
-            OrbitalPlaylist,
-            Track,
-            Artist,
             Album,
+            Artist,
+            OrbitalPlaylist,
             Position,
+            Track,
         )
 
         # Create artist
@@ -681,7 +679,7 @@ class TestPlaylistSchemaIntegration:
 
     def test_schema_serialization_compatibility(self) -> None:
         """Should serialize all schemas to JSON correctly."""
-        from src.schemas.playlist import PlaylistResponse, Track, RegionInfo
+        from src.schemas.playlist import PlaylistResponse, RegionInfo, Track
 
         # Create track
         track = Track(

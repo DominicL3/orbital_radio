@@ -5,13 +5,14 @@ Tests cover satellite listing, details retrieval, TLE data access, position calc
 and error handling with proper mocking of external dependencies.
 """
 
-import pytest
-from unittest.mock import patch
-from datetime import timedelta
-from typing import Dict, List, Any
-from fastapi.testclient import TestClient
-from fastapi import status
 import math
+from datetime import timedelta
+from typing import Any
+from unittest.mock import patch
+
+import pytest
+from fastapi import status
+from fastapi.testclient import TestClient
 
 from src.config import utcnow
 
@@ -25,12 +26,13 @@ class TestSatelliteEndpoints:
     def client(self) -> TestClient:
         """Create FastAPI test client."""
         from src.main import app
+
         return TestClient(app)
 
     @pytest.fixture
     def mock_satellite_list(
-        self, mock_satellite_data: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+        self, mock_satellite_data: dict[str, Any]
+    ) -> list[dict[str, Any]]:
         """Mock list of satellites."""
         satellites = []
         satellite_configs = [
@@ -69,7 +71,7 @@ class TestSatelliteEndpoints:
         return satellites
 
     @pytest.fixture
-    def mock_tle_response(self) -> Dict[str, Any]:
+    def mock_tle_response(self) -> dict[str, Any]:
         """Mock TLE data response."""
         return {
             "satellite_id": "25544",
@@ -82,7 +84,7 @@ class TestSatelliteEndpoints:
         }
 
     @pytest.fixture
-    def mock_positions_response(self) -> List[Dict[str, Any]]:
+    def mock_positions_response(self) -> list[dict[str, Any]]:
         """Mock satellite position predictions."""
         positions = []
         start_time = utcnow()
@@ -101,7 +103,7 @@ class TestSatelliteEndpoints:
         return positions
 
     def test_get_satellites_list_success(
-        self, client: TestClient, mock_satellite_list: List[Dict[str, Any]]
+        self, client: TestClient, mock_satellite_list: list[dict[str, Any]]
     ):
         """Test successful retrieval of satellites list."""
         with patch("src.services.satellite_service.SatelliteService") as mock_service:
@@ -135,7 +137,7 @@ class TestSatelliteEndpoints:
             mock_service.return_value.get_all_satellites.assert_called_once()
 
     def test_get_satellites_list_filter_by_category(
-        self, client: TestClient, mock_satellite_list: List[Dict[str, Any]]
+        self, client: TestClient, mock_satellite_list: list[dict[str, Any]]
     ):
         """Test filtering satellites by category."""
         # Filter to only weather satellites
@@ -165,7 +167,7 @@ class TestSatelliteEndpoints:
             )
 
     def test_get_satellites_list_filter_active_only(
-        self, client: TestClient, mock_satellite_list: List[Dict[str, Any]]
+        self, client: TestClient, mock_satellite_list: list[dict[str, Any]]
     ):
         """Test filtering satellites to active only."""
         # Mark some satellites as inactive
@@ -208,7 +210,7 @@ class TestSatelliteEndpoints:
             assert len(response_data["satellites"]) == 0
 
     def test_get_satellite_details_success(
-        self, client: TestClient, mock_satellite_data: Dict[str, Any]
+        self, client: TestClient, mock_satellite_data: dict[str, Any]
     ):
         """Test successful retrieval of satellite details."""
         satellite_id = "1"
@@ -266,7 +268,7 @@ class TestSatelliteEndpoints:
             ]
 
     def test_get_satellite_tle_success(
-        self, client: TestClient, mock_tle_response: Dict[str, Any]
+        self, client: TestClient, mock_tle_response: dict[str, Any]
     ):
         """Test successful retrieval of satellite TLE data."""
         satellite_id = "1"
@@ -308,16 +310,14 @@ class TestSatelliteEndpoints:
             assert "not found" in response_data["error"].lower()
 
     def test_get_satellite_tle_stale_data(
-        self, client: TestClient, mock_tle_response: Dict[str, Any]
+        self, client: TestClient, mock_tle_response: dict[str, Any]
     ):
         """Test TLE retrieval when data is stale."""
         satellite_id = "1"
 
         # Mock stale TLE data (older than 24 hours)
         stale_tle = mock_tle_response.copy()
-        stale_tle["last_updated"] = (
-            utcnow() - timedelta(hours=25)
-        ).isoformat()
+        stale_tle["last_updated"] = (utcnow() - timedelta(hours=25)).isoformat()
 
         with patch("src.services.satellite_service.SatelliteService") as mock_service:
             mock_service.return_value.get_satellite_tle.return_value = stale_tle
@@ -332,7 +332,7 @@ class TestSatelliteEndpoints:
             assert "stale" in response_data["warning"].lower()
 
     def test_get_satellite_positions_success(
-        self, client: TestClient, mock_positions_response: List[Dict[str, Any]]
+        self, client: TestClient, mock_positions_response: list[dict[str, Any]]
     ):
         """Test successful retrieval of satellite position predictions."""
         satellite_id = "1"
@@ -373,7 +373,7 @@ class TestSatelliteEndpoints:
             )
 
     def test_get_satellite_positions_default_duration(
-        self, client: TestClient, mock_positions_response: List[Dict[str, Any]]
+        self, client: TestClient, mock_positions_response: list[dict[str, Any]]
     ):
         """Test satellite positions with default duration parameter."""
         satellite_id = "1"
@@ -469,7 +469,7 @@ class TestSatelliteEndpoints:
     def test_get_satellites_by_category_parametrized(
         self,
         client: TestClient,
-        mock_satellite_list: List[Dict[str, Any]],
+        mock_satellite_list: list[dict[str, Any]],
         satellite_category: str,
         expected_count: int,
     ):
@@ -498,7 +498,7 @@ class TestSatelliteEndpoints:
                 )
 
     def test_satellite_list_pagination(
-        self, client: TestClient, mock_satellite_list: List[Dict[str, Any]]
+        self, client: TestClient, mock_satellite_list: list[dict[str, Any]]
     ):
         """Test pagination of satellite list."""
         page_size = 2
@@ -529,7 +529,7 @@ class TestSatelliteEndpoints:
             assert response_data["total_pages"] == 3
 
     def test_satellite_search_by_name(
-        self, client: TestClient, mock_satellite_list: List[Dict[str, Any]]
+        self, client: TestClient, mock_satellite_list: list[dict[str, Any]]
     ):
         """Test searching satellites by name."""
         search_term = "space"
@@ -557,7 +557,7 @@ class TestSatelliteEndpoints:
             )
 
     def test_concurrent_satellite_requests(
-        self, client: TestClient, mock_satellite_list: List[Dict[str, Any]]
+        self, client: TestClient, mock_satellite_list: list[dict[str, Any]]
     ):
         """Test handling of concurrent satellite data requests."""
         import threading
@@ -566,9 +566,7 @@ class TestSatelliteEndpoints:
 
         # Patch once before threads start (patch() is not thread-safe,
         # so applying it inside worker threads leaks the mock).
-        with patch(
-            "src.services.satellite_service.SatelliteService"
-        ) as mock_service:
+        with patch("src.services.satellite_service.SatelliteService") as mock_service:
             mock_service.return_value.get_all_satellites.return_value = (
                 mock_satellite_list
             )
@@ -595,7 +593,7 @@ class TestSatelliteEndpoints:
         assert all(results)
 
     def test_satellite_data_freshness_check(
-        self, client: TestClient, mock_satellite_list: List[Dict[str, Any]]
+        self, client: TestClient, mock_satellite_list: list[dict[str, Any]]
     ):
         """Test checking freshness of satellite data."""
         with patch("src.services.satellite_service.SatelliteService") as mock_service:
@@ -605,9 +603,7 @@ class TestSatelliteEndpoints:
             )
             mock_service.return_value.get_data_freshness.return_value = {
                 "last_tle_update": utcnow().isoformat(),
-                "next_scheduled_update": (
-                    utcnow() + timedelta(hours=12)
-                ).isoformat(),
+                "next_scheduled_update": (utcnow() + timedelta(hours=12)).isoformat(),
                 "stale_satellites": [],
             }
 
@@ -622,7 +618,7 @@ class TestSatelliteEndpoints:
             assert "next_scheduled_update" in response_data["data_freshness"]
 
     def test_satellite_orbital_elements_extraction(
-        self, client: TestClient, mock_tle_response: Dict[str, Any]
+        self, client: TestClient, mock_tle_response: dict[str, Any]
     ):
         """Test extraction of orbital elements from TLE data."""
         satellite_id = "1"
@@ -712,9 +708,7 @@ class TestSatelliteEndpoints:
                 "start_time": utcnow().isoformat(),
                 "end_time": (utcnow() + timedelta(minutes=6)).isoformat(),
                 "max_elevation": 85.2,
-                "max_elevation_time": (
-                    utcnow() + timedelta(minutes=3)
-                ).isoformat(),
+                "max_elevation_time": (utcnow() + timedelta(minutes=3)).isoformat(),
                 "brightness": -3.9,  # Very bright pass
             }
         ]

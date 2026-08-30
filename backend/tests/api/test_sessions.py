@@ -5,13 +5,15 @@ Tests cover session creation, retrieval, updates, deletion, orbital session mana
 and session cleanup with proper mocking of external dependencies.
 """
 
-import pytest
-from unittest.mock import Mock, patch
 from datetime import timedelta
-from typing import Dict, Any
-from src.config import utcnow
-from fastapi.testclient import TestClient
+from typing import Any
+from unittest.mock import Mock, patch
+
+import pytest
 from fastapi import status
+from fastapi.testclient import TestClient
+
+from src.config import utcnow
 
 # Import test fixtures from conftest
 
@@ -31,8 +33,8 @@ class TestSessionEndpoints:
 
     @pytest.fixture
     def mock_session_creation_request(
-        self, mock_spotify_tokens: Dict[str, Any], mock_user_profile: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, mock_spotify_tokens: dict[str, Any], mock_user_profile: dict[str, Any]
+    ) -> dict[str, Any]:
         """Mock session creation request data."""
         return {
             "spotify_tokens": mock_spotify_tokens,
@@ -40,7 +42,7 @@ class TestSessionEndpoints:
         }
 
     @pytest.fixture
-    def mock_orbital_session_request(self) -> Dict[str, Any]:
+    def mock_orbital_session_request(self) -> dict[str, Any]:
         """Mock orbital session start request."""
         return {
             "satellite_id": "iss",
@@ -50,13 +52,13 @@ class TestSessionEndpoints:
 
     @pytest.fixture
     def mock_session_response(
-        self, mock_session_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, mock_session_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Mock session response data."""
         return mock_session_data
 
     def test_get_current_session_success(
-        self, client: TestClient, mock_session_response: Dict[str, Any]
+        self, client: TestClient, mock_session_response: dict[str, Any]
     ):
         """Test successful retrieval of current session."""
         session_id = "test_session_123"
@@ -129,8 +131,8 @@ class TestSessionEndpoints:
     def test_start_orbital_session_success(
         self,
         client: TestClient,
-        mock_orbital_session_request: Dict[str, Any],
-        mock_session_response: Dict[str, Any],
+        mock_orbital_session_request: dict[str, Any],
+        mock_session_response: dict[str, Any],
     ):
         """Test successful orbital session start."""
         session_id = "test_session_123"
@@ -172,7 +174,7 @@ class TestSessionEndpoints:
             mock_service.return_value.start_orbital_session.assert_called_once()
 
     def test_start_orbital_session_invalid_session(
-        self, client: TestClient, mock_orbital_session_request: Dict[str, Any]
+        self, client: TestClient, mock_orbital_session_request: dict[str, Any]
     ):
         """Test orbital session start with invalid session ID."""
         session_id = "invalid_session"
@@ -192,7 +194,7 @@ class TestSessionEndpoints:
             assert "session" in response_data["error"].lower()
 
     def test_start_orbital_session_invalid_satellite(
-        self, client: TestClient, mock_session_response: Dict[str, Any]
+        self, client: TestClient, mock_session_response: dict[str, Any]
     ):
         """Test orbital session start with invalid satellite ID."""
         session_id = "test_session_123"
@@ -218,8 +220,8 @@ class TestSessionEndpoints:
     def test_start_orbital_session_already_active(
         self,
         client: TestClient,
-        mock_session_response: Dict[str, Any],
-        mock_orbital_session_request: Dict[str, Any],
+        mock_session_response: dict[str, Any],
+        mock_orbital_session_request: dict[str, Any],
     ):
         """Test starting orbital session when one is already active."""
         session_id = "test_session_123"
@@ -252,8 +254,8 @@ class TestSessionEndpoints:
     def test_start_orbital_session_tle_unavailable(
         self,
         client: TestClient,
-        mock_session_response: Dict[str, Any],
-        mock_orbital_session_request: Dict[str, Any],
+        mock_session_response: dict[str, Any],
+        mock_orbital_session_request: dict[str, Any],
     ):
         """Test orbital session start when TLE data is unavailable."""
         session_id = "test_session_123"
@@ -328,16 +330,14 @@ class TestSessionEndpoints:
             mock_service.return_value.delete_session.assert_called_once_with(session_id)
 
     def test_session_heartbeat_update(
-        self, client: TestClient, mock_session_response: Dict[str, Any]
+        self, client: TestClient, mock_session_response: dict[str, Any]
     ):
         """Test session heartbeat to extend expiration."""
         session_id = "test_session_123"
 
         # Mock updated session with extended expiration
         updated_session = mock_session_response.copy()
-        updated_session["expires_at"] = (
-            utcnow() + timedelta(hours=3)
-        ).isoformat()
+        updated_session["expires_at"] = (utcnow() + timedelta(hours=3)).isoformat()
         updated_session["last_activity"] = utcnow().isoformat()
 
         with patch("src.services.session_service.SessionService") as mock_service:
@@ -413,7 +413,7 @@ class TestSessionEndpoints:
             )
 
     def test_update_session_settings(
-        self, client: TestClient, mock_session_response: Dict[str, Any]
+        self, client: TestClient, mock_session_response: dict[str, Any]
     ):
         """Test updating session settings."""
         session_id = "test_session_123"
@@ -510,7 +510,7 @@ class TestSessionEndpoints:
         ]
 
     def test_concurrent_session_operations(
-        self, client: TestClient, mock_session_response: Dict[str, Any]
+        self, client: TestClient, mock_session_response: dict[str, Any]
     ):
         """Test handling of concurrent session operations."""
         import threading
@@ -582,8 +582,7 @@ class TestSessionEndpoints:
             "session_id": session_id,
             "played_tracks": set(f"track_{i}" for i in range(1000)),  # Large set
             "orbital_history": [
-                {"timestamp": utcnow(), "position": f"pos_{i}"}
-                for i in range(500)
+                {"timestamp": utcnow(), "position": f"pos_{i}"} for i in range(500)
             ],
         }
 
@@ -611,7 +610,7 @@ class TestSessionEndpoints:
             assert len(response_data["orbital_history"]) == 100  # Reduced from 500
 
     def test_session_data_export(
-        self, client: TestClient, mock_session_response: Dict[str, Any]
+        self, client: TestClient, mock_session_response: dict[str, Any]
     ):
         """Test session data export functionality."""
         session_id = "test_session_123"
@@ -704,7 +703,7 @@ class TestSessionEndpoints:
             assert response_data["analytics_opt_out"] is False
 
     def test_session_rate_limiting(
-        self, client: TestClient, mock_session_response: Dict[str, Any]
+        self, client: TestClient, mock_session_response: dict[str, Any]
     ):
         """Test rate limiting on session operations."""
         session_id = "rate_limited_session_123"

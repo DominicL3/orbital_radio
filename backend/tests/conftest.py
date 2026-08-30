@@ -6,15 +6,16 @@ in the Orbital Radio backend test suite.
 """
 
 import os
-import pytest
-import tempfile
 import sqlite3
+import tempfile
+from collections.abc import Generator
 from datetime import timedelta
 from pathlib import Path
-from typing import Dict, Any, Generator
+from typing import Any
+
+import pytest
 
 from src.config import utcnow
-
 
 os.environ.setdefault("SPOTIFY_CLIENT_ID", "test-client-id-not-a-credential")
 os.environ.setdefault("SPOTIFY_CLIENT_SECRET", "test-client-secret-not-a-credential")
@@ -52,7 +53,7 @@ def temp_db_file() -> Generator[str, None, None]:
 
 
 @pytest.fixture
-def mock_spotify_tokens() -> Dict[str, Any]:
+def mock_spotify_tokens() -> dict[str, Any]:
     """
     Create mock Spotify tokens for testing.
 
@@ -69,7 +70,7 @@ def mock_spotify_tokens() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def mock_user_profile() -> Dict[str, Any]:
+def mock_user_profile() -> dict[str, Any]:
     """
     Create mock user profile data for testing.
 
@@ -86,7 +87,7 @@ def mock_user_profile() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def mock_track_data() -> Dict[str, Any]:
+def mock_track_data() -> dict[str, Any]:
     """
     Create mock track data for testing.
 
@@ -105,7 +106,7 @@ def mock_track_data() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def mock_satellite_data() -> Dict[str, Any]:
+def mock_satellite_data() -> dict[str, Any]:
     """
     Create mock satellite data for testing.
 
@@ -127,8 +128,8 @@ def mock_satellite_data() -> Dict[str, Any]:
 
 @pytest.fixture
 def mock_session_data(
-    mock_spotify_tokens: Dict[str, Any], mock_user_profile: Dict[str, Any]
-) -> Dict[str, Any]:
+    mock_spotify_tokens: dict[str, Any], mock_user_profile: dict[str, Any]
+) -> dict[str, Any]:
     """
     Create mock session data for testing.
 
@@ -157,7 +158,7 @@ def mock_session_data(
 
 
 @pytest.fixture
-def mock_tle_data() -> Dict[str, Any]:
+def mock_tle_data() -> dict[str, Any]:
     """
     Create mock TLE data for testing.
 
@@ -186,7 +187,7 @@ def mock_geographic_position() -> tuple[float, float]:
 
 
 @pytest.fixture
-def mock_playlist_tracks(mock_track_data: Dict[str, Any]) -> list[Dict[str, Any]]:
+def mock_playlist_tracks(mock_track_data: dict[str, Any]) -> list[dict[str, Any]]:
     """
     Create mock playlist tracks for testing.
 
@@ -207,7 +208,7 @@ def mock_playlist_tracks(mock_track_data: Dict[str, Any]) -> list[Dict[str, Any]
 
 
 @pytest.fixture
-def mock_cache_data() -> Dict[str, Any]:
+def mock_cache_data() -> dict[str, Any]:
     """
     Create mock cache data for testing.
 

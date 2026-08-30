@@ -15,7 +15,9 @@ class SessionManager:
     def __init__(self, state_minutes: int | None = None) -> None:
         """Initialize empty session storage."""
         self.state_minutes = (
-            state_minutes if state_minutes is not None else get_settings().oauth_state_minutes
+            state_minutes
+            if state_minutes is not None
+            else get_settings().oauth_state_minutes
         )
         self._sessions: dict[str, dict[str, Any]] = {}
         self._states: dict[str, datetime] = {}

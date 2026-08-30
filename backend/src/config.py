@@ -3,10 +3,10 @@
 Centralizes environment variables, application settings, and satellite catalog.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from os import environ
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from dotenv import load_dotenv
 
@@ -23,7 +23,7 @@ def utcnow() -> datetime:
     Returns:
         datetime: Current UTC time with no timezone info attached.
     """
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class Settings:
@@ -93,7 +93,7 @@ class Settings:
         self.iss_fallback_tle_line2 = (
             "2 25544  51.6464 123.4567  0003456 123.4567 234.5678 15.49123456123456"
         )
-        self.satellite_catalog: Dict[str, Dict[str, Any]] = {
+        self.satellite_catalog: dict[str, dict[str, Any]] = {
             "iss": {
                 "name": "International Space Station",
                 "norad_id": 25544,

@@ -1,8 +1,9 @@
 """Test cases for user Pydantic schemas."""
 
-from src.config import utcnow
 import pytest
 from pydantic import ValidationError
+
+from src.config import utcnow
 
 
 class TestUserSchemas:

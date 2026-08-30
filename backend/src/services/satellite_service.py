@@ -6,11 +6,13 @@ from typing import Any
 from src.core.satellite_tracker import SatelliteTLEManager
 from src.database import SatelliteRepository
 from src.schemas.satellite import (
+    OrbitalElements,
+    Position,
     SatelliteResponse,
     TLEData,
-    Position,
-    OrbitalElements,
 )
+
+
 class SatelliteService:
     """Service class for coordinating satellite tracking, persistence, and API operations."""
 
@@ -97,7 +99,9 @@ class SatelliteService:
         sat_str = str(satellite_id)
         return self.tracker.generate_simplified_positions(sat_str, duration_minutes)
 
-    def get_satellite_orbital_elements(self, satellite_id: int | str) -> OrbitalElements:
+    def get_satellite_orbital_elements(
+        self, satellite_id: int | str
+    ) -> OrbitalElements:
         """Get orbital elements from tracker.
 
         Args:
@@ -143,9 +147,7 @@ class SatelliteService:
             "is_active": True,
         }
 
-    def get_satellite_list(
-        self, category: str | None = None
-    ) -> list[dict[str, Any]]:
+    def get_satellite_list(self, category: str | None = None) -> list[dict[str, Any]]:
         """Get list of satellites optionally filtered by category.
 
         Args:
@@ -244,7 +246,9 @@ class SatelliteService:
         if isinstance(cached, dict):
             ref = cached.get("last_updated") or cached.get("epoch")
         else:
-            ref = getattr(cached, "last_updated", None) or getattr(cached, "epoch", None)
+            ref = getattr(cached, "last_updated", None) or getattr(
+                cached, "epoch", None
+            )
         if not ref:
             return False
         return abs((datetime.now() - ref).total_seconds()) < max_age_hours * 3600
@@ -389,9 +393,7 @@ class SatelliteService:
         """
         self.tracker.cleanup_old_tle_data(days_to_keep=days_to_keep)
 
-    def get_satellites_paginated(
-        self, page: int, page_size: int
-    ) -> dict[str, Any]:
+    def get_satellites_paginated(self, page: int, page_size: int) -> dict[str, Any]:
         """Get paginated list of satellites.
 
         Args:
@@ -425,9 +427,7 @@ class SatelliteService:
             list[dict[str, Any]]: Matching satellite dictionaries.
         """
         all_sats = self.repository.get_active_satellites()
-        return [
-            s for s in all_sats if search_term.lower() in s.get("name", "").lower()
-        ]
+        return [s for s in all_sats if search_term.lower() in s.get("name", "").lower()]
 
     def get_data_freshness(self) -> dict[str, Any]:
         """Get freshness information for TLE data.
