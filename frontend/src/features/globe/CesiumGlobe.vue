@@ -3,6 +3,7 @@ import * as Cesium from 'cesium'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { SatelliteCatalogEntry } from '@/contracts/satellite'
 import { DemoOrbitPositionSource } from './DemoOrbitPositionSource'
+import { addCountryReference, applyCountryScaleZoomLimit, createSentinel2BaseLayer, createWorldTerrain } from './GlobeLayers'
 
 const props = withDefaults(defineProps<{
   satellite: SatelliteCatalogEntry
@@ -21,6 +22,7 @@ const emit = defineEmits<{
 
 const cesiumHost = ref<HTMLElement | null>(null)
 const isFallback = ref(false)
+const isSatelliteImageryUnavailable = ref(false)
 
 let viewer: Cesium.Viewer | undefined
 let satelliteEntity: Cesium.Entity | undefined
@@ -29,18 +31,7 @@ let orbitSource = new DemoOrbitPositionSource(props.satellite.id)
 let simulationTime = new Date('2026-08-23T00:00:00.000Z')
 let animationFrame: number | undefined
 let lastFrameTime: number | undefined
-
-function createNaturalEarthBaseLayer(): Cesium.ImageryLayer | false {
-  if (!Cesium.ImageryLayer?.fromProviderAsync || !Cesium.TileMapServiceImageryProvider?.fromUrl || !Cesium.buildModuleUrl) {
-    return false
-  }
-
-  return Cesium.ImageryLayer.fromProviderAsync(
-    Cesium.TileMapServiceImageryProvider.fromUrl(
-      Cesium.buildModuleUrl('Assets/Textures/NaturalEarthII'),
-    ),
-  )
-}
+let countryReferenceDataSources: Cesium.DataSource[] = []
 
 function toCartesian(position: ReturnType<DemoOrbitPositionSource['getPosition']>): Cesium.Cartesian3 | undefined {
   if (!Cesium.Cartesian3?.fromDegrees) return undefined
@@ -161,6 +152,9 @@ function initializeCesium(): void {
   }
 
   try {
+    const cesiumIonToken = import.meta.env.VITE_CESIUM_ION_TOKEN
+    const baseLayer = createSentinel2BaseLayer(cesiumIonToken)
+    const terrain = createWorldTerrain(cesiumIonToken)
     viewer = new Cesium.Viewer(cesiumHost.value, {
       animation: false,
       baseLayerPicker: false,
@@ -173,9 +167,8 @@ function initializeCesium(): void {
       selectionIndicator: false,
       timeline: false,
       shouldAnimate: false,
-      // Natural Earth ships with Cesium, so the globe has offline-friendly
-      // Earth imagery without requiring a Cesium Ion token.
-      baseLayer: createNaturalEarthBaseLayer(),
+      baseLayer,
+      terrain: terrain || undefined,
     } as never)
 
     if (!viewer) {
@@ -184,6 +177,15 @@ function initializeCesium(): void {
     }
 
     addEntities()
+    applyCountryScaleZoomLimit(viewer)
+    if (viewer.scene?.globe) viewer.scene.globe.enableLighting = true
+    if (!cesiumIonToken) {
+      isSatelliteImageryUnavailable.value = true
+    } else {
+      void addCountryReference(viewer).then((dataSources) => {
+        countryReferenceDataSources = dataSources
+      })
+    }
     viewer.screenSpaceEventHandler?.setInputAction?.((movement: { position: unknown }) => handlePick(movement), Cesium.ScreenSpaceEventType?.LEFT_CLICK)
     startAnimation()
   } catch {
@@ -207,6 +209,8 @@ onMounted(initializeCesium)
 
 onBeforeUnmount(() => {
   stopAnimation()
+  for (const dataSource of countryReferenceDataSources) viewer?.dataSources?.remove(dataSource, true)
+  countryReferenceDataSources = []
   const destroyed = viewer && typeof viewer.isDestroyed === 'function' ? viewer.isDestroyed() : false
   if (viewer && typeof viewer.destroy === 'function' && !destroyed) viewer.destroy()
   viewer = undefined
@@ -222,6 +226,9 @@ defineExpose({ focusSatellite })
     <div ref="cesiumHost" class="cesium-globe__canvas" aria-hidden="true" />
     <div v-if="isFallback" class="cesium-globe__fallback" role="img" aria-label="ISS simulation fallback">
       WebGL globe unavailable — ISS SIMULATION remains available in this view.
+    </div>
+    <div v-else-if="isSatelliteImageryUnavailable" class="cesium-globe__fallback cesium-globe__fallback--setup" role="status">
+      Satellite imagery requires a Cesium ion token. Add VITE_CESIUM_ION_TOKEN to frontend/.env.local and restart Vite.
     </div>
   </section>
 </template>
@@ -253,6 +260,11 @@ defineExpose({ focusSatellite })
   color: rgba(223, 243, 255, 0.72);
   text-align: center;
   font: 0.72rem/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.cesium-globe__fallback--setup {
+  inset: auto 1.5rem 1.5rem;
+  transform: none;
 }
 
 </style>
