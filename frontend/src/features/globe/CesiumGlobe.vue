@@ -3,7 +3,7 @@ import * as Cesium from 'cesium'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { SatelliteCatalogEntry } from '@/contracts/satellite'
 import { DemoOrbitPositionSource } from './DemoOrbitPositionSource'
-import { addCountryReference, applyCountryScaleZoomLimit, createSentinel2BaseLayer, createWorldTerrain } from './GlobeLayers'
+import { applyCountryScaleZoomLimit, createGoogleSatelliteWithLabelsBaseLayer, createWorldTerrain } from './GlobeLayers'
 
 const props = withDefaults(defineProps<{
   satellite: SatelliteCatalogEntry
@@ -31,7 +31,6 @@ let orbitSource = new DemoOrbitPositionSource(props.satellite.id)
 let simulationTime = new Date('2026-08-23T00:00:00.000Z')
 let animationFrame: number | undefined
 let lastFrameTime: number | undefined
-let countryReferenceDataSources: Cesium.DataSource[] = []
 
 function toCartesian(position: ReturnType<DemoOrbitPositionSource['getPosition']>): Cesium.Cartesian3 | undefined {
   if (!Cesium.Cartesian3?.fromDegrees) return undefined
@@ -153,7 +152,7 @@ function initializeCesium(): void {
 
   try {
     const cesiumIonToken = import.meta.env.VITE_CESIUM_ION_TOKEN
-    const baseLayer = createSentinel2BaseLayer(cesiumIonToken)
+    const baseLayer = createGoogleSatelliteWithLabelsBaseLayer(cesiumIonToken)
     const terrain = createWorldTerrain(cesiumIonToken)
     viewer = new Cesium.Viewer(cesiumHost.value, {
       animation: false,
@@ -181,10 +180,6 @@ function initializeCesium(): void {
     if (viewer.scene?.globe) viewer.scene.globe.enableLighting = true
     if (!cesiumIonToken) {
       isSatelliteImageryUnavailable.value = true
-    } else {
-      void addCountryReference(viewer).then((dataSources) => {
-        countryReferenceDataSources = dataSources
-      })
     }
     viewer.screenSpaceEventHandler?.setInputAction?.((movement: { position: unknown }) => handlePick(movement), Cesium.ScreenSpaceEventType?.LEFT_CLICK)
     startAnimation()
@@ -209,8 +204,6 @@ onMounted(initializeCesium)
 
 onBeforeUnmount(() => {
   stopAnimation()
-  for (const dataSource of countryReferenceDataSources) viewer?.dataSources?.remove(dataSource, true)
-  countryReferenceDataSources = []
   const destroyed = viewer && typeof viewer.isDestroyed === 'function' ? viewer.isDestroyed() : false
   if (viewer && typeof viewer.destroy === 'function' && !destroyed) viewer.destroy()
   viewer = undefined
