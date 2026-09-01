@@ -1,6 +1,8 @@
-"""Configuration settings for Orbital Radio backend.
+"""Configuration settings for the Orbital Radio backend.
 
-Centralizes environment variables, application settings, and satellite catalog.
+The application is anonymous and has no provider credentials, cookies, or
+server-side user sessions.  Settings here cover the satellite maintenance
+job, offline geographic data, and on-demand Radio Browser metadata requests.
 """
 
 from datetime import UTC, datetime
@@ -34,47 +36,32 @@ class Settings:
         """Load application settings from environment variables."""
         self.environment = environ.get("ENVIRONMENT", "development").strip().lower()
         self.log_level = environ.get("LOG_LEVEL", "INFO").strip().upper()
-        self.secret_key = environ.get("SECRET_KEY", "dev-secret-change-in-production")
-        if self.environment == "production" and (
-            self.secret_key == "dev-secret-change-in-production"
-            or len(self.secret_key) < 32
-        ):
-            raise ValueError("A strong SECRET_KEY is required in production")
 
         # Database
         self.database_path = environ.get("DATABASE_PATH", "./orbital_radio.db")
-
-        # Spotify API
-        self.spotify_client_id = environ.get("SPOTIFY_CLIENT_ID", "").strip()
-        self.spotify_client_secret = environ.get("SPOTIFY_CLIENT_SECRET", "").strip()
-        self.spotify_redirect_uri = environ.get(
-            "SPOTIFY_REDIRECT_URI",
-            "http://localhost:8000/auth/spotify/callback",
-        ).strip()
-
-        # Session Management
-        self.session_expire_hours = int(environ.get("SESSION_EXPIRE_HOURS", "3"))
-        self.oauth_state_minutes = int(environ.get("OAUTH_STATE_MINUTES", "10"))
-        self.max_played_tracks_per_session = int(
-            environ.get("MAX_PLAYED_TRACKS_PER_SESSION", "500")
-        )
 
         # Satellite Data & Refresh Timing
         self.tle_refresh_hours = int(environ.get("TLE_REFRESH_HOURS", "12"))
         self.tle_stale_hours = int(environ.get("TLE_STALE_HOURS", "12"))
 
-        # Playlist Generation
-        self.country_cooldown_songs = int(environ.get("COUNTRY_COOLDOWN_SONGS", "5"))
-        self.playlist_cache_max_age_hours = int(
-            environ.get("PLAYLIST_CACHE_MAX_AGE_HOURS", "24")
-        )
-        self.prefetch_playlists_on_startup = environ.get(
-            "PREFETCH_PLAYLISTS_ON_STARTUP", "true"
-        ).lower() in {"1", "true", "yes"}
-
         # Geographic Data
         self.country_boundaries_file = environ.get(
             "COUNTRY_BOUNDARIES_FILE", "./data/country_boundaries.geojson"
+        )
+
+        # Radio Browser metadata requests.  These values intentionally do not
+        # include station audio settings: audio goes directly from a selected
+        # broadcaster to the browser and is never fetched by this service.
+        self.radio_browser_user_agent = environ.get(
+            "RADIO_BROWSER_USER_AGENT", "OrbitalRadio/0.1"
+        ).strip()
+        self.radio_request_timeout_seconds = float(
+            environ.get("RADIO_REQUEST_TIMEOUT_SECONDS", "5")
+        )
+        self.radio_result_limit = int(environ.get("RADIO_RESULT_LIMIT", "50"))
+        self.radio_cache_ttl_minutes = int(environ.get("RADIO_CACHE_TTL_MINUTES", "30"))
+        self.radio_failure_cache_minutes = int(
+            environ.get("RADIO_FAILURE_CACHE_MINUTES", "10")
         )
 
         # Satellite data
@@ -106,7 +93,8 @@ class Settings:
     def cors_origins(self) -> list[str]:
         """Return configured, explicit browser origins."""
         value = environ.get(
-            "CORS_ORIGINS", "http://localhost:3000,http://localhost:8000"
+            "CORS_ORIGINS",
+            "http://localhost:4174,http://127.0.0.1:4174",
         )
         return [origin.strip() for origin in value.split(",") if origin.strip()]
 

@@ -1,7 +1,8 @@
 """Background task scheduler for Orbital Radio backend.
 
-Provides periodic background task execution using APScheduler for tasks such as
-refreshing TLE data, updating playlist caches, and cleaning up expired sessions.
+Provides the periodic TLE refresh task using APScheduler.  Radio Browser
+metadata is fetched on demand and cached by ``RadioService``; there are no
+authentication, playlist, or station-prefetch jobs.
 """
 
 import logging
@@ -9,7 +10,6 @@ import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from src.config import get_settings
-from src.services.auth_service import session_manager
 from src.services.satellite_service import SatelliteService
 
 logger = logging.getLogger(__name__)
@@ -27,11 +27,6 @@ async def refresh_tle_data_job() -> None:
         logger.error("Error executing refresh_tle_data_job: %s", exc)
 
 
-async def cleanup_auth_sessions_job() -> None:
-    """Remove expired authentication sessions and OAuth states."""
-    session_manager.cleanup_expired()
-
-
 def init_scheduler() -> AsyncIOScheduler:
     """Initialize and configure the background scheduler with periodic jobs.
 
@@ -46,14 +41,10 @@ def init_scheduler() -> AsyncIOScheduler:
             id="refresh_tle_data",
             replace_existing=True,
         )
-    if scheduler.get_job("cleanup_auth_sessions") is None:
-        scheduler.add_job(
-            cleanup_auth_sessions_job,
-            "interval",
-            minutes=30,
-            id="cleanup_auth_sessions",
-            replace_existing=True,
-        )
+    # Remove this legacy job if a long-lived process was upgraded in place.
+    # New processes never register it, and no auth/session state exists.
+    if scheduler.get_job("cleanup_auth_sessions") is not None:
+        scheduler.remove_job("cleanup_auth_sessions")
     return scheduler
 
 

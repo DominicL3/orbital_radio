@@ -1,18 +1,17 @@
 """
 Comprehensive unit tests for the SatelliteTLEManager class.
 
-Tests cover TLE data fetching, caching, orbital calculations, position generation,
-and geographic region mapping with proper mocking of external dependencies.
+Tests cover TLE data fetching, caching, orbital calculations, and position
+generation with mocked external dependencies.
 """
 
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
 
 import pytest
-import requests
 
 from src.core.satellite_tracker import SatelliteTLEManager
-from src.schemas.satellite import GeographicRegion, OrbitalElements, Position, TLEData
+from src.schemas.satellite import OrbitalElements, Position, TLEData
 
 
 class TestSatelliteTLEManager:
@@ -39,7 +38,7 @@ NOAA 18
         assert tle_manager.last_update_time is None
         assert "celestrak.org" in tle_manager.celestrak_base_url
 
-    @patch("requests.get")
+    @patch("httpx.get")
     def test_fetch_tle_data_success(
         self, mock_get, tle_manager, mock_tle_response_text
     ):
@@ -78,11 +77,11 @@ NOAA 18
             mock_get.assert_called_once()
             mock_parse.assert_called_once_with(mock_tle_response_text, "iss")
 
-    @patch("requests.get")
+    @patch("httpx.get")
     def test_fetch_tle_data_http_error(self, mock_get, tle_manager):
         """Test handling of HTTP errors when fetching TLE data."""
         # Arrange
-        mock_get.side_effect = requests.exceptions.RequestException("Network error")
+        mock_get.side_effect = RuntimeError("Network error")
 
         # Act & Assert
         with pytest.raises(Exception) as exc_info:
@@ -90,7 +89,7 @@ NOAA 18
 
         assert "Network error" in str(exc_info.value) or "TLE" in str(exc_info.value)
 
-    @patch("requests.get")
+    @patch("httpx.get")
     def test_fetch_tle_data_invalid_response(self, mock_get, tle_manager):
         """Test handling of invalid TLE response format."""
         # Arrange
@@ -131,7 +130,7 @@ NOAA 18
         # Assert
         assert result is None
 
-    @patch("requests.get")
+    @patch("httpx.get")
     def test_refresh_all_tle_data_success(
         self, mock_get, tle_manager, mock_tle_response_text
     ):
@@ -174,7 +173,7 @@ NOAA 18
                 assert tle_manager.last_update_time is not None
                 assert mock_get.call_count >= 1
 
-    @patch("requests.get")
+    @patch("httpx.get")
     def test_refresh_all_tle_data_partial_failure(self, mock_get, tle_manager):
         """Test refresh handling when some satellites fail to update."""
 
@@ -187,7 +186,7 @@ NOAA 18
                 mock_response.raise_for_status = Mock()
                 return mock_response
             else:
-                raise requests.exceptions.RequestException("Satellite not found")
+                raise RuntimeError("Satellite not found")
 
         mock_get.side_effect = side_effect
 
@@ -285,77 +284,7 @@ NOAA 18
         with pytest.raises(ValueError):
             tle_manager.generate_simplified_positions("iss", 10000)
 
-    def test_get_geographic_region_land_coordinates(
-        self, tle_manager, mock_land_coordinates
-    ):
-        """Test geographic region detection for land coordinates."""
-        # Arrange
-        lat, lon = mock_land_coordinates
-
-        with patch.object(tle_manager, "_lookup_country") as mock_lookup:
-            expected_region = GeographicRegion(
-                country_code="US",
-                country_name="United States",
-                region="North America",
-                continent="North America",
-                is_ocean=False,
-            )
-            mock_lookup.return_value = expected_region
-
-            # Act
-            region = tle_manager.get_geographic_region(lat, lon)
-
-            # Assert
-            assert isinstance(region, GeographicRegion)
-            assert region.country_code == "US"
-            assert region.country_name == "United States"
-            assert region.is_ocean is False
-            mock_lookup.assert_called_once_with(lat, lon)
-
-    def test_get_geographic_region_ocean_coordinates(
-        self, tle_manager, mock_ocean_coordinates
-    ):
-        """Test geographic region detection for ocean coordinates."""
-        # Arrange
-        lat, lon = mock_ocean_coordinates
-
-        with patch.object(tle_manager, "_lookup_country") as mock_lookup:
-            expected_region = GeographicRegion(
-                country_code=None,
-                country_name="Atlantic Ocean",
-                region="Ocean",
-                continent="Ocean",
-                is_ocean=True,
-                closest_country="US",
-            )
-            mock_lookup.return_value = expected_region
-
-            # Act
-            region = tle_manager.get_geographic_region(lat, lon)
-
-            # Assert
-            assert isinstance(region, GeographicRegion)
-            assert region.is_ocean is True
-            assert region.closest_country == "US"
-            assert "Ocean" in region.country_name
-
-    def test_get_geographic_region_invalid_coordinates(self, tle_manager):
-        """Test geographic region detection with invalid coordinates."""
-        # Act & Assert - Invalid latitude
-        with pytest.raises(ValueError):
-            tle_manager.get_geographic_region(91.0, 0.0)
-
-        with pytest.raises(ValueError):
-            tle_manager.get_geographic_region(-91.0, 0.0)
-
-        # Act & Assert - Invalid longitude
-        with pytest.raises(ValueError):
-            tle_manager.get_geographic_region(0.0, 181.0)
-
-        with pytest.raises(ValueError):
-            tle_manager.get_geographic_region(0.0, -181.0)
-
-    @patch("requests.get")
+    @patch("httpx.get")
     def test_cache_expiration_and_refresh(
         self, mock_get, tle_manager, mock_tle_response_text
     ):

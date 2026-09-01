@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
-import type { RadioState } from '@/contracts/radio'
-import type { SatelliteCatalogEntry, SimulationState } from '@/contracts/satellite'
+import { computed, onBeforeUnmount, reactive, ref } from 'vue'
+import type { OrbitPosition, SatelliteCatalogEntry, SimulationState } from '@/contracts/satellite'
 import { issCatalogEntry, satelliteCatalog } from '@/fixtures/iss'
-import { mockRadioTracks } from '@/fixtures/radio'
 import CesiumGlobe from '@/features/globe/CesiumGlobe.vue'
 import ExplorerControls from '@/features/explorer/ExplorerControls.vue'
 import SatelliteInfoPanel from '@/features/explorer/SatelliteInfoPanel.vue'
 import RadioPanel from '@/features/radio/RadioPanel.vue'
+import { createRadioApi } from '@/features/radio/radioApi'
+import { createRadioPlayer } from '@/features/radio/radioState'
 
 type GlobeHandle = {
   focusSatellite?: () => void
@@ -22,12 +22,11 @@ const selectedSatellite = computed<SatelliteCatalogEntry>(() => {
   return satelliteCatalog.find((satellite) => satellite.id === selectedSatelliteId.value) ?? issCatalogEntry
 })
 
-const radioState = reactive<RadioState>({
-  status: 'ready',
-  isPlaying: false,
-  track: mockRadioTracks[0] ?? null,
-})
-const radioTrackIndex = ref(0)
+const radioApi = createRadioApi()
+const radioPlayer = createRadioPlayer({ api: radioApi })
+const radioState = radioPlayer.state
+let latestPositionRequest = 0
+let countryRequestController: AbortController | undefined
 
 function toggleSimulation() {
   simulation.isPlaying = !simulation.isPlaying
@@ -46,21 +45,37 @@ function selectSatellite(satellite: SatelliteCatalogEntry | string | null) {
   selectedSatelliteId.value = typeof satellite === 'string' ? satellite : satellite.id
 }
 
+function handlePositionUpdated(position: OrbitPosition) {
+  const requestId = ++latestPositionRequest
+  countryRequestController?.abort()
+  const controller = new AbortController()
+  countryRequestController = controller
+
+  void radioApi.resolveCountry(position, controller.signal)
+    .then((countryCode) => {
+      if (requestId !== latestPositionRequest) return
+      radioPlayer.observeCountry(countryCode)
+    })
+    .catch(() => {
+      // A failed or superseded lookup is treated as unknown position. The
+      // player cancels any pending dwell but keeps a working current station.
+      if (requestId === latestPositionRequest) radioPlayer.observeCountry(null)
+    })
+}
+
 function toggleRadio() {
-  radioState.isPlaying = !radioState.isPlaying
+  void radioPlayer.toggle()
 }
 
-function nextTrack() {
-  if (!mockRadioTracks.length) {
-    radioState.status = 'empty'
-    radioState.track = null
-    return
-  }
-
-  radioTrackIndex.value = (radioTrackIndex.value + 1) % mockRadioTracks.length
-  radioState.track = mockRadioTracks[radioTrackIndex.value] ?? null
-  radioState.status = radioState.track ? 'ready' : 'empty'
+function nextStation() {
+  void radioPlayer.next()
 }
+
+onBeforeUnmount(() => {
+  latestPositionRequest += 1
+  countryRequestController?.abort()
+  radioPlayer.dispose()
+})
 </script>
 
 <template>
@@ -73,6 +88,7 @@ function nextTrack() {
       :speed="simulation.speed"
       :show-orbit-path="showOrbitPath"
       @satellite-selected="selectSatellite"
+      @position-updated="handlePositionUpdated"
     />
 
     <div class="vignette" aria-hidden="true" />
@@ -97,7 +113,7 @@ function nextTrack() {
     </aside>
 
     <aside class="radio-overlay">
-      <RadioPanel :state="radioState" @toggle-play="toggleRadio" @next-track="nextTrack" />
+      <RadioPanel :state="radioState" @toggle-play="toggleRadio" @next-station="nextStation" />
     </aside>
   </main>
 </template>
