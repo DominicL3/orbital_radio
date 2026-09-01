@@ -2,7 +2,7 @@
 
 For project-wide architecture, deployment, and session-policy decisions, see [`../CLAUDE.md`](../CLAUDE.md). This file contains frontend-specific guidance only.
 
-## Locked product decisions
+## Product decisions
 
 - Use Vue 3, Vite, and TypeScript. Cesium owns the globe; React, Next.js, and D3 are not part of this app.
 - The visual language is cinematic and dark: near-black panels, restrained technical type, cool orbital blue, and a warm radio accent. The layout is desktop-first with responsive overlays.

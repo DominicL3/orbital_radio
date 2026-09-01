@@ -27,6 +27,13 @@ export function createWorldTerrain(token?: string): Cesium.Terrain | false {
   })
 }
 
+export function applyAlwaysDaylightGlobeOptions(viewer: {
+  scene?: { globe?: { enableLighting: boolean } }
+}): void {
+  const globe = viewer.scene?.globe
+  if (globe) globe.enableLighting = false
+}
+
 export function applyCountryScaleZoomLimit(viewer: {
   scene?: { screenSpaceCameraController?: { minimumZoomDistance: number } }
 }): void {

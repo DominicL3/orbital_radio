@@ -13,7 +13,12 @@ const cesiumMocks = vi.hoisted(() => {
 
 vi.mock('cesium', () => cesiumMocks)
 
-import { applyCountryScaleZoomLimit, createGoogleSatelliteWithLabelsBaseLayer, createWorldTerrain } from './GlobeLayers'
+import {
+  applyAlwaysDaylightGlobeOptions,
+  applyCountryScaleZoomLimit,
+  createGoogleSatelliteWithLabelsBaseLayer,
+  createWorldTerrain,
+} from './GlobeLayers'
 
 describe('createGoogleSatelliteWithLabelsBaseLayer', () => {
   it('does not request imagery when no Cesium ion token is configured', () => {
@@ -54,5 +59,15 @@ describe('applyCountryScaleZoomLimit', () => {
     })
 
     expect(controller.minimumZoomDistance).toBe(100_000)
+  })
+})
+
+describe('applyAlwaysDaylightGlobeOptions', () => {
+  it('disables sun-position lighting so every country remains visible', () => {
+    const globe = { enableLighting: true }
+
+    applyAlwaysDaylightGlobeOptions({ scene: { globe } })
+
+    expect(globe.enableLighting).toBe(false)
   })
 })

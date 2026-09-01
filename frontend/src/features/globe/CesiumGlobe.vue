@@ -3,7 +3,12 @@ import * as Cesium from 'cesium'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { SatelliteCatalogEntry } from '@/contracts/satellite'
 import { DemoOrbitPositionSource } from './DemoOrbitPositionSource'
-import { applyCountryScaleZoomLimit, createGoogleSatelliteWithLabelsBaseLayer, createWorldTerrain } from './GlobeLayers'
+import {
+  applyAlwaysDaylightGlobeOptions,
+  applyCountryScaleZoomLimit,
+  createGoogleSatelliteWithLabelsBaseLayer,
+  createWorldTerrain,
+} from './GlobeLayers'
 
 const props = withDefaults(defineProps<{
   satellite: SatelliteCatalogEntry
@@ -177,7 +182,7 @@ function initializeCesium(): void {
 
     addEntities()
     applyCountryScaleZoomLimit(viewer)
-    if (viewer.scene?.globe) viewer.scene.globe.enableLighting = true
+    applyAlwaysDaylightGlobeOptions(viewer)
     if (!cesiumIonToken) {
       isSatelliteImageryUnavailable.value = true
     }
