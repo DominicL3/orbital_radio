@@ -1,12 +1,11 @@
-"""Unit tests for the background task scheduler."""
+"""Tests for the satellite-only background scheduler."""
 
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import PropertyMock, patch
 
 import pytest
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from src.scheduler import (
-    cleanup_auth_sessions_job,
     init_scheduler,
     refresh_tle_data_job,
     scheduler,
@@ -15,57 +14,43 @@ from src.scheduler import (
 
 
 @pytest.mark.asyncio
-async def test_cleanup_auth_sessions_job() -> None:
-    """Test the scheduled authentication cleanup delegates to session storage."""
-    with patch("src.scheduler.session_manager.cleanup_expired") as cleanup:
-        await cleanup_auth_sessions_job()
-    cleanup.assert_called_once_with()
-
-
-@pytest.mark.asyncio
 async def test_refresh_tle_data_job_success() -> None:
-    """Test refresh_tle_data_job calls SatelliteService.refresh_tle_data."""
-    with patch("src.scheduler.SatelliteService") as mock_service_cls:
-        mock_instance = MagicMock()
-        mock_service_cls.return_value = mock_instance
-
+    """Delegate the scheduled refresh to SatelliteService."""
+    with patch("src.scheduler.SatelliteService") as service_class:
         await refresh_tle_data_job()
 
-        mock_service_cls.assert_called_once()
-        mock_instance.refresh_tle_data.assert_called_once()
+    service_class.assert_called_once_with()
+    service_class.return_value.refresh_tle_data.assert_called_once_with()
 
 
 @pytest.mark.asyncio
 async def test_refresh_tle_data_job_handles_exception() -> None:
-    """Test refresh_tle_data_job gracefully catches exceptions."""
-    with patch("src.scheduler.SatelliteService") as mock_service_cls:
-        mock_instance = MagicMock()
-        mock_instance.refresh_tle_data.side_effect = Exception("Service error")
-        mock_service_cls.return_value = mock_instance
-
-        # Should not raise exception
+    """Log a refresh failure without crashing the scheduler loop."""
+    with patch("src.scheduler.SatelliteService") as service_class:
+        service_class.return_value.refresh_tle_data.side_effect = RuntimeError(
+            "service unavailable"
+        )
         await refresh_tle_data_job()
 
 
-def test_init_scheduler() -> None:
-    """Test init_scheduler configures and returns the scheduler with jobs."""
-    sch = init_scheduler()
-    assert isinstance(sch, AsyncIOScheduler)
+def test_init_scheduler_registers_only_tle_refresh() -> None:
+    """Register TLE refresh and no auth, playlist, or station jobs."""
+    scheduled = init_scheduler()
 
-    jobs = sch.get_jobs()
-    job_ids = [job.id for job in jobs]
-
+    assert isinstance(scheduled, AsyncIOScheduler)
+    job_ids = {job.id for job in scheduled.get_jobs()}
     assert "refresh_tle_data" in job_ids
-    assert "cleanup_auth_sessions" in job_ids
+    assert "cleanup_auth_sessions" not in job_ids
 
 
-def test_stop_scheduler() -> None:
-    """Test stop_scheduler stops the scheduler if running."""
+def test_stop_scheduler_stops_running_scheduler() -> None:
+    """Shut down a running scheduler without waiting for jobs."""
     with (
         patch.object(
             type(scheduler), "running", new_callable=PropertyMock, return_value=True
         ),
-        patch.object(scheduler, "shutdown") as mock_shutdown,
+        patch.object(scheduler, "shutdown") as shutdown,
     ):
         stop_scheduler()
-        mock_shutdown.assert_called_once_with(wait=False)
+
+    shutdown.assert_called_once_with(wait=False)
