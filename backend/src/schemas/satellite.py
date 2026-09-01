@@ -1,7 +1,7 @@
 """Satellite schemas for Orbital Radio backend.
 
 This module defines Pydantic models for satellite TLE data, orbital elements,
-positions, geographic regions, orbit information, and satellite response objects.
+positions, orbit information, and satellite response objects.
 """
 
 from datetime import datetime, timedelta
@@ -238,20 +238,6 @@ class SatellitePosition(BaseModel):
     velocity_km_s: float | None = Field(None, ge=0, description="Velocity in km/s")
     visibility: VisibilityInfo | None = Field(
         None, description="Visibility information"
-    )
-
-
-class GeographicRegion(BaseModel):
-    """Geographic region model."""
-
-    country_code: str | None = Field(None, description="ISO country code")
-    country_name: str = Field(..., description="Country or region name")
-    region_type: str = Field(default="country", description="Region type")
-    region: str | None = Field(None, description="Sub-region name")
-    continent: str | None = Field(None, description="Continent name")
-    is_ocean: bool = Field(default=False, description="Ocean status")
-    closest_country: str | None = Field(
-        None, description="Closest country code if ocean"
     )
 
 

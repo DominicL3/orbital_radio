@@ -4,10 +4,10 @@ import logging
 from datetime import datetime, timedelta
 from typing import Any
 
-import requests
+import httpx
 
 from src.config import get_settings
-from src.schemas.satellite import GeographicRegion, OrbitalElements, Position, TLEData
+from src.schemas.satellite import OrbitalElements, Position, TLEData
 from src.utils.exceptions import TLEDataError
 
 logger = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ class SatelliteTLEManager:
                 url = f"{self.celestrak_base_url}{satellite_id}.txt"
 
             try:
-                res = requests.get(url, timeout=10)
+                res = httpx.get(url, timeout=10)
                 res.raise_for_status()
                 parsed = self._parse_tle_data(res.text, satellite_id)
                 self.tle_cache[satellite_id] = parsed
@@ -144,25 +144,6 @@ class SatelliteTLEManager:
 
         tle = self.get_cached_tle(satellite_id)
         return self._calculate_positions(tle, duration_minutes)
-
-    def get_geographic_region(self, lat: float, lon: float) -> GeographicRegion:
-        """Get geographic region for lat/lon coordinates.
-
-        Args:
-            lat: Latitude coordinate.
-            lon: Longitude coordinate.
-
-        Returns:
-            GeographicRegion: Regional classification data.
-
-        Raises:
-            ValueError: If coordinates are out of range.
-        """
-        if lat < -90.0 or lat > 90.0:
-            raise ValueError("Latitude must be between -90 and 90")
-        if lon < -180.0 or lon > 180.0:
-            raise ValueError("Longitude must be between -180 and 180")
-        return self._lookup_country(lat, lon)
 
     def get_current_position(self, satellite_id: str) -> dict[str, Any]:
         """Calculate current satellite position.
@@ -310,13 +291,3 @@ class SatelliteTLEManager:
                 )
             )
         return positions
-
-    def _lookup_country(self, lat: float, lon: float) -> GeographicRegion:
-        """Lookup country region for coordinates."""
-        return GeographicRegion(
-            country_code="US",
-            country_name="United States",
-            region="North America",
-            continent="North America",
-            is_ocean=False,
-        )

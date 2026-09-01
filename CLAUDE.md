@@ -603,3 +603,10 @@ Repository documentation must explain:
 - Environment variables
 - Test and quality commands
 - The fact that the application links directly to broadcaster streams and does not relay or record audio
+
+## Commit subjects
+
+- Write short imperative commit subjects in sentence case.
+- Capitalize only the first word and proper nouns or acronyms; use
+  `Define anonymous radio API behavior` as the model.
+- Do not use Conventional Commit prefixes such as `feat:` or `fix:`.

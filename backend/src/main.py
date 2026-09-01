@@ -8,7 +8,8 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.auth import router as auth_router
+from src.api.geography import router as geography_router
+from src.api.radio import router as radio_router
 from src.api.satellites import router as satellites_router
 from src.config import get_settings
 from src.database import init_database
@@ -36,13 +37,14 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_settings().cors_origins,
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app.include_router(satellites_router)
-app.include_router(auth_router)
+app.include_router(geography_router)
+app.include_router(radio_router)
 
 
 @app.get("/health")
