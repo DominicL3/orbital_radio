@@ -64,7 +64,9 @@ async def test_selects_station_and_registers_play(client: object = None) -> None
 async def test_selects_station_with_unknown_bitrate() -> None:
     browser = Mock()
     browser.search_stations = AsyncMock(return_value=[station(FIRST, bitrate=None)])
-    browser.resolve_play = AsyncMock(side_effect=lambda uuid: station(uuid, bitrate=None))
+    browser.resolve_play = AsyncMock(
+        side_effect=lambda uuid: station(uuid, bitrate=None)
+    )
     service = service_with(browser, [0.0])
 
     selected = await service.select_station("JP", set())  # type: ignore[attr-defined]

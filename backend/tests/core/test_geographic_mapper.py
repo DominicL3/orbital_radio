@@ -19,9 +19,7 @@ def test_loads_repository_boundaries(boundaries_file: Path) -> None:
     mapper = GeographicMapper(boundaries_file)
 
     assert mapper.country_boundaries
-    assert {"US", "GB", "JP", "AU", "BR"}.issubset(
-        mapper.country_boundaries
-    )
+    assert {"US", "GB", "JP", "AU", "BR"}.issubset(mapper.country_boundaries)
 
 
 @pytest.mark.parametrize(
