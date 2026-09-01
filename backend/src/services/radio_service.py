@@ -177,7 +177,7 @@ class RadioService:
         return (
             provider_score + codec_score + bitrate_score,
             int(metrics.get("clickcount", 0)),
-            station.bitrate,
+            station.bitrate or 0,
         )
 
     def _eligible_stations(
