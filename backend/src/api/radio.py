@@ -47,8 +47,8 @@ class StationSelectionRequest(BaseModel):
         normalized: list[str] = []
         for value in values:
             candidate = value.strip()
-            if not candidate or len(candidate) > 128:
-                raise ValueError("exclude_station_uuids contains an invalid UUID")
+            if not candidate or len(candidate) > 128 or not _is_valid_station_uuid(candidate):
+                raise ValueError("exclude_station_uuids must contain valid station UUIDs")
             normalized.append(candidate)
         return normalized
 
