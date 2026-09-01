@@ -1,648 +1,586 @@
 # Orbital Radio Design Document
 
-The Orbital Radio is a web-based music streaming application that combines real-time satellite trajectories with geographic-based Spotify playlists. As satellites orbit Earth, the application dynamically selects and plays popular music from each country/region the satellite passes over.
+Orbital Radio lets users follow a simulated or real-time satellite in LEO with live radio provided by the [Radio Browser API](https://www.radio-browser.info/) from countries all around the world. As the selected satellite orbits the Earth, the application plays a music station from the country beneath it.
 
-## Session expiry limits
+## System architecture
 
-- Spotify login is remembered by default for **seven days** (`SESSION_EXPIRE_HOURS=168`); the MVP does not need a separate “Remember me” checkbox.
-- The browser receives only an opaque session ID in an `HttpOnly`, `Secure`, `SameSite=Lax` cookie. Spotify access and refresh tokens must never be returned to browser JavaScript.
-- The OAuth state cookie is short-lived (ten minutes) and one-time use.
-- When Spotify login is enabled in production, store sessions and the server-only Spotify token data in PostgreSQL so they survive a Railway restart or deploy. Redis is not required for the hobby-project MVP.
-- Logging out deletes the server session and clears the cookie. Expired sessions should be removed routinely.
+```text
++--------------------+     +---------------------+     +---------------------+
+| Orbit position     | --> | Offline country     | --> | 3-second dwell      |
+| (lat/lon)          |     | lookup (ISO/null)   |     | on country          |
++--------------------+     +---------------------+     +---------------------+
+                                                               |
+                                                               v
++--------------------+     +---------------------+     +---------------------+
+| Radio Browser      | <-- | RadioBrowserClient  | <-- | Radio selection     |
+| mirrors            |     |                     |     | service             |
++--------------------+     +---------------------+     +---------------------+
+                                                               |
+                                                    normalized RadioStation
+                                                               |
+                                                               v
++--------------------+     +---------------------+     +---------------------+
+| Broadcaster HTTPS  | <-- | One HTMLAudioElement| <-- | Vue application     |
+| MP3/AAC stream     |     |                     |     |                     |
++--------------------+     +---------------------+     +---------------------+
+```
+
+The backend owns country resolution, Radio Browser access, filtering, selection, and metadata caching. The frontend owns the current page's playback state, the wall-clock dwell timer, and the live audio element. The backend never proxies, relays, records, or modifies station audio; audio bytes travel directly from the broadcaster to the browser and never pass through FastAPI.
 
 # Backend
-## Core Requirements
 
-### Functional Requirements
-- **Spotify Integration**: Authenticate users via Spotify OAuth and access music playback controls
-- **Satellite Tracking**: Approximate the real-time position of the International Space Station (ISS) for MVP, with architecture designed to support additional satellites in future iterations
-- **Geographic Music Mapping**: Generate playlists using popular music from each country/region with offline country boundary detection
-- **TLE Data Management**: Fetch and cache satellite orbital data for client-side calculations
-- **Playlist Pre-Caching**: Pre-fetch and cache Spotify playlists to avoid rate limiting during active playback
-- **Playlist Intelligence**: Generate playlists for orbital segments with smooth playback transitions
-- **Song Duration Filtering**: Only include tracks between 1-8 minutes in duration
-- **Session Management**: Manage temporary user sessions without persistent storage
-- **Track Deduplication**: Prevent song repetition within orbital sessions using cached played-song sets
-- **Country Cooldown**: Implement configurable cooldown period (default: 5 songs) to prevent oversampling large countries like USA and Russia
+## Core requirements
 
-### Non-Functional Requirements
-- **Simplicity**: Prioritize minimal complexity and fast development iteration
-- **Maintainability**: Clear code structure with separation of concerns
-- **Testability**: Unit test coverage with mocked external dependencies
-- **Reliability**: Graceful error handling for external API failures
-- **Cost Efficiency**: Optimized for proof-of-concept scale (dozens to hundreds of users)
+### Functional requirements
 
-## Technical Architecture
+- Track or simulate the ISS position with an `OrbitPositionSource`-compatible frontend contract.
+- Fetch and cache satellite TLE data for real position sources and future satellite expansion.
+- Resolve latitude and longitude to an ISO 3166-1 alpha-2 country code using repository-owned offline boundary data.
+- Return `null` for oceans and unresolved coordinates; do not substitute the nearest country.
+- Query Radio Browser by `countrycode` and select an eligible music station.
+- Filter out broken, non-HTTPS, HLS, and unsupported-codec stations.
+- Keep country station results in a bounded in-memory TTL cache.
+- Fail over between Radio Browser mirrors and between eligible stations.
+- Report Radio Browser clicks through its `/json/url/{stationuuid}` behavior when a station is selected for playback.
+- Expose only normalized application schemas, never raw Radio Browser responses.
 
-### Technology Stack
-- **Framework**: FastAPI (Python 3.12+)
-- **Database**: SQLite for satellite data persistence, session storage, and playlist caching
-- **Caching**: In-memory dictionaries for TLE data and pre-cached Spotify playlists
-- **Background Tasks**: APScheduler for periodic TLE updates and playlist pre-caching
-- **Geographic Data**: Offline country boundaries dataset (Natural Earth or GeoJSON)
-- **Authentication**: OAuth 2.0 with Spotify Web API
-- **Communication**: HTTP REST API
-- **Testing**: pytest with fixtures and mocking
-- **Deployment**: Railway cloud platform
+### Non-functional requirements
 
-### Core Dependencies
-```bash
+- **Simplicity:** implement a concrete Radio Browser integration without speculative provider abstractions.
+- **Maintainability:** separate external API parsing, station selection, geographic mapping, and HTTP routes.
+- **Testability:** mock all external network traffic; automated tests must not depend on Radio Browser or live station availability.
+- **Reliability:** use timeouts, mirror failover, stale cache fallback, and same-country station fallback.
+- **Cost efficiency:** keep metadata traffic small and send audio directly from broadcasters to browsers.
+- **Privacy:** collect no accounts, profiles, favorites, or persistent listener history.
+
+## Technology stack
+
+- **Backend:** FastAPI on Python 3.12+
+- **HTTP client:** `httpx`
+- **Satellite persistence:** SQLite
+- **Station cache:** in-memory, bounded, TTL-based
+- **Background tasks:** APScheduler for TLE refresh only
+- **Geographic data:** offline GeoJSON country boundaries with Shapely/GeoPandas
+- **Frontend:** Vue 3, Vite, TypeScript, and Cesium
+- **Playback:** one browser `HTMLAudioElement`
+- **Testing:** pytest, pytest-asyncio, Vitest, Vue Test Utils, and Playwright
+- **Deployment:** Railway
+
+## Core dependencies
+
+```text
 fastapi
 uvicorn
-sqlite3
-spotipy
-requests
+httpx
 apscheduler
-python-dateutil
-shapely           # For geographic point-in-polygon operations
-geopandas         # For loading and querying country boundaries
+python-dotenv
+shapely
+geopandas
 pytest
 pytest-asyncio
-pytest-mock
 ruff
 ```
 
-## Directory Structure
-```
+SQLite is provided by Python's standard library. No music SDK, OAuth library, HLS player, or audio-proxy dependency is required.
+
+## Target directory structure
+
+```text
 orbital_radio/
+├── CLAUDE.md
+├── TODO_RADIO_CHANGES.md
 ├── backend/
 │   ├── src/
-│   │   ├── main.py                 # FastAPI application entry point
-│   │   ├── config.py              # Configuration management
-│   │   ├── database.py            # SQLite connection management
-│   │   ├── scheduler.py           # Background task scheduling
-│   │   │
-│   │   ├── api/                   # API route definitions
-│   │   │   ├── auth.py           # Endpoints for Spotify authentication (login, callback, logout, refresh)
-│   │   │   ├── satellites.py     # Endpoints for satellite data (list, details, TLE, positions)
-│   │   │   ├── playlists.py      # Endpoints for playlist generation, next/previous track, mark as played
-│   │   │   └── sessions.py       # Endpoints for session management (create, get, delete)
-│   │   │   # Each file defines FastAPI routes for a specific domain, calling into services for business logic.
-│   │   │
-│   │   ├── core/                  # Core business logic
-│   │   │   ├── satellite_tracker.py    # TLE data fetching and management
-│   │   │   ├── playlist_generator.py   # Region-aware music selection logic
-│   │   │   ├── spotify_client.py       # Spotify API wrapper
-│   │   │   ├── geographic_mapper.py    # Geographic region mapping with offline boundaries
-│   │   │   └── playlist_cache.py       # Playlist pre-caching and management
-│   │   │
-│   │   ├── models/                # SQLite database models
-│   │   │   └── satellite.py       # Defines the Satellite class representing the satellite table/records
-│   │   │   # Models define the structure of your database tables and are used for DB operations.
-│   │   │
-│   │   ├── schemas/               # Pydantic models for API validation/serialization
-│   │   │   ├── user.py            # User-related schemas (e.g., UserCreate, UserResponse)
-│   │   │   ├── satellite.py       # Satellite-related schemas (e.g., SatelliteResponse)
-│   │   │   └── playlist.py        # Playlist and track schemas (e.g., Track, PlaylistResponse)
-│   │   │   # Schemas ensure request/response data is well-structured and validated.
-│   │   │
-│   │   ├── services/              # Service layer for business logic
-│   │   │   ├── auth_service.py        # Handles Spotify OAuth, token management
-│   │   │   ├── satellite_service.py   # Handles satellite data fetching, TLE updates
-│   │   │   ├── playlist_service.py    # Handles playlist generation, next/previous track logic
-│   │   │   └── cache_service.py       # Handles in-memory or persistent caching
-│   │   │   # Services coordinate between models, core logic, and external APIs.
-│   │   │
-│   │   └── utils/                 # Utility functions (logging, exceptions, helpers)
-│   │
-│   ├── tests/                     # Test suite
-│   ├── orbital_radio.db          # SQLite database file
-│   ├── Dockerfile
-│   ├── railway.toml             # Railway deployment configuration
-│   ├── pyproject.toml           # uv project configuration
-│   └── uv.lock                  # uv lockfile for reproducible installs
+│   │   ├── main.py
+│   │   ├── config.py
+│   │   ├── database.py
+│   │   ├── scheduler.py
+│   │   ├── api/
+│   │   │   ├── radio.py
+│   │   │   └── satellites.py
+│   │   ├── core/
+│   │   │   ├── radio_browser_client.py
+│   │   │   ├── geographic_mapper.py
+│   │   │   └── satellite_tracker.py
+│   │   ├── models/
+│   │   │   └── satellite.py
+│   │   ├── schemas/
+│   │   │   ├── radio.py
+│   │   │   └── satellite.py
+│   │   ├── services/
+│   │   │   ├── radio_service.py
+│   │   │   └── satellite_service.py
+│   │   └── utils/
+│   ├── data/
+│   │   └── country_boundaries.geojson
+│   └── tests/
+└── frontend/
+    ├── src/
+    │   ├── contracts/
+    │   │   ├── radio.ts
+    │   │   └── satellite.ts
+    │   └── features/
+    │       ├── globe/
+    │       └── radio/
+    │           ├── RadioPanel.vue
+    │           └── radioState.ts
+    └── e2e/
 ```
 
-## Core Components Design
+The structure is a target architecture. A service file should exist only when it contains real selection or caching behavior; do not create empty layers for symmetry.
 
-### Satellite TLE Data Manager (`core/satellite_tracker.py`)
+## Satellite TLE manager
 
-**Purpose**: Fetch and manage TLE (Two-Line Element) data from CelesTrak with simple in-memory caching
+`core/satellite_tracker.py` fetches and caches TLE data and produces satellite positions.
 
-**Key Methods**:
 ```python
 class SatelliteTLEManager:
-    def __init__(self):
-        self.tle_cache = {}  # In-memory cache
-
-    def fetch_tle_data(self, satellite_id: str) -> TLEData
-    def get_cached_tle(self, satellite_id: str) -> Optional[TLEData]
-    def refresh_all_tle_data(self) -> None  # Called by scheduler
-    def get_orbital_elements(self, satellite_id: str) -> OrbitalElements
-    def generate_simplified_positions(self, satellite_id: str, duration_minutes: int) -> List[Position]
-    def get_geographic_region(self, lat: float, lon: float) -> GeographicRegion
+    def fetch_tle_data(self, satellite_id: str) -> TLEData: ...
+    def get_cached_tle(self, satellite_id: str) -> TLEData | None: ...
+    def refresh_all_tle_data(self) -> None: ...
+    def get_current_position(self, satellite_id: str) -> Position: ...
+    def generate_positions(
+        self,
+        satellite_id: str,
+        duration_minutes: int,
+    ) -> list[Position]: ...
 ```
 
-**Implementation Notes**:
-- Fetch TLE data from CelesTrak every 12 hours via APScheduler background task
-- Store raw TLE data in simple in-memory dictionary cache
-- Generate simplified orbital position predictions for client-side use
-- **MVP Focus**: Support only the International Space Station (ISS) initially
-- **Future Expansion**: Architecture designed to easily add additional satellites (weather satellites, remote sensing satellites, etc.) by extending the satellite catalog
-- Calculations are optimized for smooth, performant frontend animation, not scientific accuracy
-- Comprehensive error handling for CelesTrak unavailability
+- Refresh TLE data every 12 hours through APScheduler.
+- Support the ISS first and retain a catalog shape suitable for a few additional satellites.
+- Calculations target smooth visualization rather than scientific or navigational accuracy.
+- Keep the frontend demo source clearly labeled as a simulation until a real TLE-backed source replaces it.
+- Do not return hard-coded country data from the completed implementation.
 
-### Geographic Mapper (`core/geographic_mapper.py`)
+## Geographic mapper
 
-**Purpose**: Determine which country/region a satellite is currently over using offline geographic boundaries.
+`core/geographic_mapper.py` resolves sampled satellite coordinates with repository-owned offline boundaries.
 
-**Key Methods**:
 ```python
 class GeographicMapper:
-    def __init__(self, boundaries_file: str):
-        self.country_boundaries = None  # GeoDataFrame with country polygons
-        self.load_boundaries(boundaries_file)
-
-    def load_boundaries(self, file_path: str) -> None
-    def get_country_from_coordinates(self, lat: float, lon: float) -> str | None
-    def get_nearest_country(self, lat: float, lon: float, max_distance_km: float = 1000, exclude_countries: list[str] = None) -> str
+    def __init__(self, boundaries_file: str): ...
+    def get_country_code(self, latitude: float, longitude: float) -> str | None: ...
 ```
 
-**Implementation Notes**:
-- Use **offline country boundary data** from Natural Earth (simplified 1:110m dataset) or similar GeoJSON source
-- Load country boundaries once at startup and keep in memory for fast lookups
-- Use Shapely/GeoPandas for efficient point-in-polygon queries
-- For ocean/international waters, find the nearest country within a reasonable distance threshold
-- Support excluding countries from nearest-neighbor search to enable cooldown functionality
-- Cache boundary data in the repository to avoid external dependencies at runtime
-- Provides ISO country codes (e.g., "US", "JP", "BR") for playlist mapping
+- Load simplified country polygons once and retain them in memory.
+- Return uppercase ISO 3166-1 alpha-2 codes such as `US`, `JP`, and `BR`.
+- Return `None` for oceans, international waters, invalid points, and unresolved areas.
+- Do not perform nearest-country substitution.
+- Validate latitude and longitude at the API boundary.
 
-### Geographic Playlist Generator (`core/playlist_generator.py`)
+## Radio Browser client
 
-**Purpose**: Create region-aware track selection using popular music from each nation/region, supporting dynamic next-track selection based on real-time satellite position.
+`core/radio_browser_client.py` is the only Radio Browser integration. It is concrete and provider-specific; do not introduce `StationDirectory`, provider adapters, or a generic provider interface.
 
-**Key Methods**:
 ```python
-class GeographicPlaylistGenerator:
-    def __init__(self, playlist_cache: PlaylistCache, country_cooldown: int = 5):
-        self.playlist_cache = playlist_cache
-        self.region_playlist_rotation = {}  # Placeholder for future playlist type rotation
-        self.country_cooldown = country_cooldown  # Number of songs before country can be reused
+class RadioBrowserClient:
+    async def search_stations(
+        self,
+        country_code: str,
+        limit: int,
+    ) -> list[RadioStation]: ...
 
-    def get_region_top_50_tracks(self, region_code: str) -> list[Track]
-    def filter_by_duration(self, tracks: list[Track], min_duration: int = 60, max_duration: int = 480) -> list[Track]
-    def deduplicate_tracks(self, tracks: list[Track], played_tracks: set[str]) -> list[Track]
-    def is_country_on_cooldown(self, country_code: str, recent_countries: list[str]) -> bool
-    def get_next_available_country(self, satellite_position: tuple[float, float], recent_countries: list[str], max_distance_km: int = 2000) -> str
-    def get_next_track(self, satellite_position: tuple[float, float], played_tracks: set[str], recent_countries: list[str]) -> Track
-    def get_previous_track(self, session_id: str) -> Track
+    async def resolve_play(self, station_uuid: str) -> RadioStation: ...
 ```
 
-**Implementation Notes**:
-- For MVP, only use the "Top 50" playlist from Spotify for each nation/region.
-- **Relies on pre-cached playlists** from `PlaylistCache` to avoid rate limiting
-- The design should allow for easy extension to support additional playlist types (e.g., "Viral 50", "New Music Friday", etc.) in the future.
-- When the user requests the next song, dynamically determine the satellite's current position and select a track from the nation/region currently under the satellite.
-- **Country Cooldown Logic**: Track the last N countries used (configurable, default 5) and skip them when selecting the next track to prevent oversampling large countries
-  - If the satellite is over a country on cooldown, search for the nearest available country (within max distance threshold)
-  - Recent countries are stored in session as a FIFO queue/deque of country codes
-  - When a track is selected from a country, add that country to the end of the recent countries list
-  - If recent countries list exceeds cooldown length, remove the oldest entry
-- If the satellite is over the ocean or an unassigned area, select the closest available nation/region (not on cooldown) and use its Top 50 playlist for the next track.
-- When the user presses back, play the previously played track from session history (does not affect cooldown state).
-- When the user pauses and resumes, playback should resume from the current position in the song (handled via Spotify API controls).
-- Generate playlists or tracks based on predicted or real-time orbital paths and nation/region boundaries.
-- Include fallback mechanisms for regions with limited Spotify coverage.
+Implementation requirements:
 
-### Playlist Cache Manager (`core/playlist_cache.py`)
+- Discover API mirrors through `all.api.radio-browser.info` or the `_api._tcp.radio-browser.info` SRV record.
+- Randomize the discovered mirrors and retry the next mirror after timeouts, connection failures, retryable server errors, or invalid JSON.
+- Never hard-code one Radio Browser server.
+- Send a descriptive application `User-Agent`.
+- Use `stationuuid`, not the legacy `id` field.
+- Use uppercase `countrycode`, not the deprecated country-name field.
+- Query `/json/stations/search` with `hidebroken=true`, `is_https=true`, a bounded `limit`, and explicit ordering.
+- Normalize `url_resolved`, which resolves redirects and M3U/PLS/ASX playlists for browser clients.
+- Apply strict response validation before data reaches the service or API layer.
+- Never fetch arbitrary client-supplied URLs and never fetch station audio.
 
-**Purpose**: Pre-fetch and cache Spotify playlists to avoid rate limiting during active user sessions.
+## Radio selection service
 
-**Key Methods**:
+`services/radio_service.py` owns provider-specific filtering, result caching, rotation, and failure handling.
+
 ```python
-class PlaylistCache:
-    def __init__(self, db_path: str):
-        self.db_path = db_path  # SQLite database for persistent cache
-        self.memory_cache = {}  # In-memory cache for fast access
+class RadioService:
+    async def select_station(
+        self,
+        country_code: str,
+        exclude_station_uuids: set[str],
+    ) -> RadioStation | None: ...
 
-    def prefetch_all_country_playlists(self, access_token: str) -> None
-    def get_cached_playlist(self, country_code: str) -> list[Track] | None
-    def is_cache_stale(self, country_code: str, max_age_hours: int = 24) -> bool
-    def refresh_stale_caches(self, access_token: str) -> None
-    def get_cache_stats(self) -> dict
+    def report_failed_station(self, station_uuid: str) -> None: ...
 ```
 
-**Implementation Notes**:
-- **Pre-cache playlists for all major countries** (150+ countries with Spotify presence) during initialization and via background task
-- Store cached playlists in SQLite with timestamps to track freshness
-- Refresh caches every 24 hours via APScheduler background task to keep music current
-- Load frequently accessed playlists into memory cache for fast retrieval
-- Implement exponential backoff for Spotify API rate limits
-- Gracefully handle countries without Spotify coverage by maintaining a fallback list
-- Reduces API calls during user sessions from hundreds to near-zero
-- Cache includes track metadata (ID, name, artist, duration, preview URL)
+This service is not a provider abstraction. It directly coordinates `RadioBrowserClient` for the application's one provider.
 
-### Spotify Integration (`core/spotify_client.py`)
+## Country and station switching
 
-**Purpose**: Handle Spotify API interactions for authentication and music search
+Radio changes follow the country beneath the satellite. A new land country must remain unchanged for three continuous wall-clock seconds before the radio changes, and simulation speed does not alter this dwell time. Ocean or unresolved positions cancel a pending change and keep the current station playing.
 
-**Key Methods**:
-```python
-class SpotifyClient:
-    def authenticate_user(self, auth_code: str) -> UserTokens
-    def get_user_profile(self, access_token: str) -> UserProfile
-    def search_country_playlists(self, country: str, playlist_type: str, access_token: str) -> List[Track]
-    def search_tracks(self, query: str, access_token: str, limit: int = 50) -> List[Track]
-    def refresh_user_token(self, refresh_token: str) -> UserTokens
+```text
++------------------------+
+| Sample satellite       |
+| latitude/longitude     |
++------------------------+
+            |
+            v
++------------------------+       ocean / unknown
+| Resolve ISO country    | ------------------------------+
++------------------------+                               |
+            | land country                               |
+            v                                            |
++------------------------+       yes                     |
+| Already the committed  | ------------------------------+
+| radio country?         |                               |
++------------------------+                               |
+            | no                                         |
+            v                                            |
++------------------------+       changed before 3 sec    |
+| Same new country for   | ------------------------------+
+| 3 wall-clock seconds?  |                               |
++------------------------+                               |
+            | yes                                        |
+            v                                            v
++------------------------+       none available   +------------------------+
+| Select eligible HTTPS  | ---------------------->| Keep current station   |
+| MP3/AAC music station  |                        | (or wait if none yet)  |
++------------------------+                        +------------------------+
+            |
+            | station selected
+            v
++------------------------+       error / stall
+| Play live in the one   | ------------------------------+
+| HTMLAudioElement       |                               |
++------------------------+                               |
+            ^                                            |
+            |                                            |
+            +---- select another eligible UUID <---------+
+                  from the same committed country
 ```
 
-**Implementation Notes**:
-- Use `requests` for all HTTP calls (synchronous)
-- Implement basic retry logic for rate limiting
-- Store tokens in SQLite-backed session storage
-- Handle token refresh automatically
-- Focus on search endpoints rather than recommendation APIs
-- No persistent token storage beyond session
+The dwell controller uses real elapsed time. If the simulated orbit moves through a country in less than three wall-clock seconds, that country does not trigger a station change. If an eligible station cannot be found, keep the current working station; if no station has played yet, remain in the waiting state.
 
-### Playback Control & Session Management (`services/auth_service.py`)
+### Radio station eligibility
 
-**Purpose**: Manage playback controls and session state, including pause, resume, next, and previous track functionality.
+A station is eligible only when it represents music on a best-effort basis and all of the following are true:
 
-**Key Methods**:
-```python
-class SessionManager:
-    def __init__(self, db_path: str):
-        self.db_path = db_path  # SQLite-backed session storage
+- `lastcheckok` is true.
+- `url_resolved` uses HTTPS.
+- `hls` is false.
+- The normalized codec is MP3 or AAC.
+- The station contains at least one approved music tag.
+- The station contains no explicit non-music denylist tag.
+- The UUID and resolved stream URL are present and valid.
 
-    def create_session(self, spotify_tokens: dict) -> str
-    def get_session(self, session_id: str) -> dict | None
-    def update_session(self, session_id: str, data: dict) -> None
-    def add_played_track(self, session_id: str, track_id: str) -> None
-    def get_played_tracks(self, session_id: str) -> set[str]
-    def add_recent_country(self, session_id: str, country_code: str, max_cooldown: int) -> None
-    def get_recent_countries(self, session_id: str) -> list[str]
-    def cleanup_expired_sessions(self) -> None
-    def get_previous_track(self, session_id: str) -> Track
-    def set_playback_position(self, session_id: str, track_id: str, position_ms: int) -> None
-    def get_playback_position(self, session_id: str, track_id: str) -> int
-```
+The music allowlist should include broad tags such as `music`, `rock`, `pop`, `jazz`, `classical`, `electronic`, `dance`, `folk`, `country`, `hip-hop`, `reggae`, `metal`, `blues`, `soul`, `funk`, and `world music`. The denylist should include tags such as `news`, `talk`, `sports`, `religious`, `politics`, `weather`, `scanner`, `emergency`, `education`, and `podcast`.
 
-**Implementation Notes**:
-- Store playback position for each track in the session to support pause/resume.
-- Maintain a history stack of played tracks for back button functionality.
-- Maintain a FIFO list of recently used country codes for cooldown tracking.
-- When a track is selected, add its country code to the recent countries list using `add_recent_country()`, which automatically maintains the list size.
-- When the user presses next, use the current satellite position to select the next track dynamically, respecting country cooldowns.
-- When the user presses back, retrieve the previous track from session history (does not affect cooldown state).
-- When the user pauses, store the current playback position; when resuming, continue from that position.
+Radio Browser tags are free-form community metadata. Music-only behavior is therefore best-effort, and the UI must not claim editorial certification.
 
-## Data Models
+### Ranking and rotation
 
-### Satellite Model (SQLite)
+- Prefer recently healthy stations and MP3 where otherwise equivalent.
+- Reject nonsensical or unusable bitrates; bitrate is a quality signal, not an absolute guarantee.
+- Use Radio Browser vote/click signals to form a strong candidate pool.
+- Rotate or randomize within that pool so every visit does not deterministically receive the same station.
+- Exclude the current station on manual Next and exclude stations that failed during the current page visit.
+- Keep a short, bounded process-wide negative cache for reported failures.
+- If no candidate remains, return `None`; never fall back to non-music, HTTP, HLS, another country, or a commercial provider.
+
+## Station caching
+
+- Cache normalized eligible station lists by country code in memory.
+- Use a configurable TTL, with 30 minutes as the default.
+- Bound the number of cached countries and stations.
+- Serve still-usable stale data when every Radio Browser mirror is temporarily unavailable.
+- Do not persist station metadata to SQLite.
+- Do not prefetch every country and do not add a station-refresh scheduler job.
+- Negative-cache a locally failed station for a short configurable period, with 10 minutes as the default.
+
+## Data models and schemas
+
+### Satellite model
+
+SQLite persists satellite catalog and TLE information only.
+
 ```python
 class Satellite:
-    id: int  # Primary key
-    name: str  # "International Space Station"
-    norad_id: int  # NORAD catalog number
-    category: str  # 'iss', 'weather', 'starlink'
-    tle_line1: str  # TLE first line
-    tle_line2: str  # TLE second line
-    tle_epoch: datetime  # TLE epoch time
-    is_active: bool  # Whether to track this satellite
-    last_updated: datetime  # When TLE was last refreshed
+    id: int
+    name: str
+    norad_id: int
+    category: str
+    tle_line1: str | None
+    tle_line2: str | None
+    tle_epoch: datetime | None
+    is_active: bool
+    last_updated: datetime | None
 ```
 
-### Session Data (In-Memory)
+### Radio station schema
+
+`RadioStation` is a non-persistent Pydantic response schema, not a database model and not a provider-neutral domain abstraction.
+
 ```python
-session_data = {
-    "session_id": "uuid4_string",
-    "spotify_tokens": {
-        "access_token": "...",
-        "refresh_token": "...",
-        "expires_at": datetime
-    },
-    "user_profile": {
-        "display_name": "User Name",
-        "spotify_user_id": "..."
-    },
-    "current_orbital_session": {
-        "satellite_id": "iss",  # MVP: Always ISS
-        "start_time": datetime,
-        "tle_data": {...},
-        "playlist": [...],
-        "played_tracks": set(),  # Track IDs to prevent repetition
-        "recent_countries": [],  # FIFO list of recently used country codes for cooldown tracking
-        "region_playlist_index": {}  # Playlist type rotation per region
-    },
-    "created_at": datetime,
-    "expires_at": datetime
+class RadioStation(BaseModel):
+    station_uuid: str
+    name: str
+    country_code: str
+    tags: list[str]
+    favicon_url: str | None
+    homepage_url: str | None
+    stream_url: str
+    codec: Literal["MP3", "AAC"]
+    bitrate: int | None
+```
+
+The matching TypeScript contract uses the same meaning and stable field names. Raw Radio Browser fields must not leak into frontend feature code.
+
+There is no user, session, favorite, playlist, track, played-item, playback-position, or cached-station database model.
+
+## API design
+
+### Geographic endpoint
+
+```text
+GET /geography/country?latitude={lat}&longitude={lon}
+```
+
+Returns a small response containing `country_code: string | null`. The frontend may sample this endpoint at a modest fixed interval; it must not call it on every animation frame.
+
+### Radio endpoints
+
+```text
+POST /radio/stations/select
+POST /radio/stations/{station_uuid}/failed
+```
+
+The selection request contains:
+
+```json
+{
+  "country_code": "JP",
+  "exclude_station_uuids": []
 }
 ```
 
-### Cached Playlist Model (SQLite)
+`POST /radio/stations/select` selects one eligible station, registers the Radio Browser play/click resolution, and returns `RadioStation`. It returns a clear no-station response when no eligible candidate exists.
+
+The failure endpoint accepts a Radio Browser station UUID, places it in the bounded negative cache, and contains no arbitrary URL parameter. It is advisory and must be rate-limited or otherwise protected from unbounded cache growth.
+
+### Satellite endpoints
+
+```text
+GET /satellites
+GET /satellites/{id}
+GET /satellites/{id}/tle
+GET /satellites/{id}/positions
+```
+
+### Health endpoints
+
+```text
+GET /health
+GET /status/satellites
+```
+
+Health responses may report cache counts and last TLE refresh time but must not expose station stream URLs beyond normal selection responses.
+
+## Background tasks
+
+APScheduler exists only for satellite maintenance.
+
 ```python
-class CachedPlaylist:
-    id: int  # Primary key
-    country_code: str  # ISO 2-letter code (e.g., "US", "JP")
-    playlist_type: str  # "top_50" for MVP
-    tracks_json: str  # JSON-serialized list of tracks
-    last_updated: datetime  # When playlist was last fetched from Spotify
-    track_count: int  # Number of tracks in playlist
-    is_valid: bool  # Whether playlist has valid data
-```
-
-## API Endpoints Design
-
-### Authentication Endpoints
-```
-POST /auth/spotify/login     # Initiate Spotify OAuth flow
-POST /auth/spotify/callback  # Handle OAuth callback and create session
-POST /auth/refresh           # Refresh access tokens
-DELETE /auth/logout          # Clear session data
-```
-
-### Satellite Endpoints
-```
-GET /satellites                    # List available satellites
-GET /satellites/{id}              # Get satellite details
-GET /satellites/{id}/tle          # Get current TLE data for client calculations
-GET /satellites/{id}/positions    # Get simplified position predictions
-```
-
-### Playlist Endpoints
-```
-POST /playlists/orbital                      # Generate orbital playlist for session
-GET /playlists/orbital/{session_id}         # Get current orbital playlist
-POST /playlists/orbital/{session_id}/next   # Get next tracks in sequence
-POST /playlists/orbital/{session_id}/played # Mark track as played
-```
-
-### Playback Endpoints
-```
-POST /playback/pause                # Pause current track and store position
-POST /playback/resume               # Resume current track from stored position
-POST /playback/next                 # Play next track based on current satellite position
-POST /playback/previous             # Play previous track from session history
-```
-
-### Session Management Endpoints
-```
-GET /sessions/current           # Get current session data
-POST /sessions/{id}/orbital     # Start orbital listening session
-DELETE /sessions/{id}           # End session
-```
-
-### Health and Status Endpoints
-```
-GET /health                     # Basic health check
-GET /status/satellites          # Satellite data freshness status
-GET /status/cache              # Cache statistics
-```
-
-## Background Task Management
-
-### APScheduler Configuration
-```python
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-
-scheduler = AsyncIOScheduler()
-
-# Update TLE data every 12 hours (MVP: ISS only)
-@scheduler.scheduled_job('interval', hours=12)
-async def refresh_tle_data():
+@scheduler.scheduled_job("interval", hours=12)
+async def refresh_tle_data() -> None:
     await satellite_service.refresh_all_tle_data()
-
-# Refresh playlist caches every 24 hours to keep music current
-@scheduler.scheduled_job('interval', hours=24)
-async def refresh_playlist_caches():
-    await playlist_cache.refresh_stale_caches()
-
-# Clean up expired sessions every 30 minutes
-@scheduler.scheduled_job('interval', minutes=30)
-async def cleanup_sessions():
-    await session_manager.cleanup_expired_sessions()
-
-# Clean up large played-tracks sets every hour
-@scheduler.scheduled_job('interval', hours=1)
-async def cleanup_played_tracks():
-    await session_manager.cleanup_large_played_sets()
 ```
 
-## Testing Strategy
+There are no authentication cleanup, user-session cleanup, playlist refresh, station prefetch, or played-history jobs.
 
-### Unit Testing Requirements
-- **Minimum 80% code coverage** across all modules with pytest
-- **Isolated tests** with mocked external dependencies like for the Spotify API and CelesTrak
-- **Async test support** using pytest-asyncio
-- **Database tests** using in-memory SQLite for fast execution
-- **API tests** using FastAPI TestClient
+## Error handling
 
-### Test Structure Example
+Use explicit application exceptions that preserve safe, user-facing behavior without exposing upstream response bodies.
+
 ```python
-@pytest.mark.asyncio
-async def test_geographic_playlist_generation():
-    # Given
-    session_data = {"spotify_tokens": {...}, "played_tracks": set()}
-    satellite_id = "iss"
-
-    # Mock Spotify search
-    with patch('app.core.spotify_client.SpotifyClient') as mock_spotify:
-        mock_spotify.search_country_playlists.return_value = mock_tracks
-
-        # When
-        playlist = await playlist_generator.generate_orbital_playlist(
-            session_data, satellite_id, 90
-        )
-
-        # Then
-        assert len(playlist.tracks) > 0
-        assert all(60 <= track.duration_ms <= 480000 for track in playlist.tracks)
+class TLEDataError(Exception): ...
+class GeographicLookupError(Exception): ...
+class RadioBrowserError(Exception): ...
+class NoEligibleStationError(Exception): ...
 ```
 
-## Error Handling & Monitoring
+- Timeouts and temporary mirror failures trigger mirror failover.
+- Invalid upstream data is rejected and logged without returning it to the browser.
+- Exhausted mirrors may use still-usable stale country cache entries.
+- Exhausted station candidates produce a no-station result; they do not broaden content or transport rules.
+- Browser playback failures trigger another same-country selection and a bounded failure report.
 
-### Exception Hierarchy
-```python
-class TLEDataError(Exception):
-    """TLE data fetching or parsing related errors"""
+## Configuration
 
-class SpotifyAPIError(Exception):
-    """Spotify API related errors"""
-
-class SessionExpiredError(Exception):
-    """User session expired or invalid"""
-
-class PlaylistGenerationError(Exception):
-    """Playlist generation related errors"""
-```
-
-### Health Checks
-```python
-@app.get("/health")
-def health_check():
-    return {
-        "status": "healthy",
-        "timestamp": datetime.utcnow(),
-        "version": app.version
-    }
-
-@app.get("/status/detailed")
-def detailed_status():
-    return {
-        "database": check_database_health(),
-        "tle_cache": len(tle_manager.tle_cache),
-        "active_sessions": session_manager.count_sessions(),
-        "last_tle_update": tle_manager.last_update_time
-    }
-```
-
-## Configuration Management
-
-### Environment Variables
-```python
-# Spotify API
-SPOTIFY_CLIENT_ID=your_client_id
-SPOTIFY_CLIENT_SECRET=your_client_secret
-SPOTIFY_REDIRECT_URI=https://your-app.railway.app/auth/spotify/callback
-
+```dotenv
 # Application
-SECRET_KEY=your_secret_key
-ENVIRONMENT=production
+ENVIRONMENT=development
 LOG_LEVEL=INFO
+CORS_ORIGINS=http://localhost:3000,http://localhost:8000
 
-# Session Management
-SESSION_EXPIRE_HOURS=168
-MAX_PLAYED_TRACKS_PER_SESSION=500
-
-# Playlist Generation
-COUNTRY_COOLDOWN_SONGS=5  # Number of songs before a country can be reused
-
-# Database
+# Database and geographic data
 DATABASE_PATH=./orbital_radio.db
-
-# Geographic Data
 COUNTRY_BOUNDARIES_FILE=./data/country_boundaries.geojson
 
-# Playlist Cache
-PLAYLIST_CACHE_MAX_AGE_HOURS=24
-PREFETCH_PLAYLISTS_ON_STARTUP=true
+# Satellite data
+TLE_REFRESH_HOURS=12
+TLE_STALE_HOURS=12
+
+# Radio Browser metadata requests
+RADIO_BROWSER_USER_AGENT=OrbitalRadio/0.1
+RADIO_REQUEST_TIMEOUT_SECONDS=5
+RADIO_RESULT_LIMIT=50
+RADIO_CACHE_TTL_MINUTES=30
+RADIO_FAILURE_CACHE_MINUTES=10
+
+# Frontend radio behavior
+VITE_COUNTRY_DWELL_SECONDS=3
 ```
 
-## Railway Deployment
+The dwell value is three wall-clock seconds. Radio Browser requires no API key. The application has no secret key, OAuth settings, cookie settings, or user-session configuration.
 
-### Railway Configuration (`railway.toml`)
-```toml
-[build]
-  builder = "DOCKERFILE"
+# Frontend
 
-[deploy]
-  healthcheckPath = "/health"
-  healthcheckTimeout = 300
-  restartPolicyType = "ON_FAILURE"
+Frontend-specific ownership and coding boundaries remain in `frontend/AGENTS.md`. The rules below define the radio behavior shared with the backend.
+
+## Radio state
+
+The frontend is anonymous: it has no accounts, login, favorites, preferences, or persistent listening history. It keeps only page-lifetime state:
+
+```typescript
+interface RadioStation {
+  stationUuid: string
+  name: string
+  countryCode: string
+  tags: string[]
+  faviconUrl: string | null
+  homepageUrl: string | null
+  streamUrl: string
+  codec: 'MP3' | 'AAC'
+  bitrate: number | null
+}
+
+type RadioStatus =
+  | 'waiting'
+  | 'connecting'
+  | 'playing'
+  | 'paused'
+  | 'retrying'
+  | 'unavailable'
 ```
 
-### Dockerfile
-```dockerfile
-# Multi-stage build for optimal caching and smaller image size
-FROM python:3.13-slim AS builder
+The player owns:
 
-# Copy uv binary from official image (pinned version for reproducibility)
-COPY --from=ghcr.io/astral-sh/uv:0.5 /uv /uvx /bin/
+- One long-lived `HTMLAudioElement`
+- The current normalized station
+- The current committed country
+- The pending country and wall-clock timer
+- A bounded in-memory set of failed or recently used UUIDs for the page visit
+- Playback and connection status
 
-# Set working directory
-WORKDIR /app
+It does not use local storage, cookies, IndexedDB, or browser account state.
 
-# Enable bytecode compilation for faster startup
-ENV UV_COMPILE_BYTECODE=1
+## Player behavior
 
-# Use the system Python environment instead of creating a virtualenv
-ENV UV_PROJECT_ENVIRONMENT=/usr/local
+- The first Play action is a user gesture and requests a station for the current committed land country.
+- Assign HTTPS MP3/AAC streams directly to the audio element without HLS or Web Audio processing.
+- Do not set `crossorigin` unless a concrete browser requirement justifies it; basic cross-origin media playback does not require reading the audio response.
+- Pause stops or pauses the live connection. Resume reconnects to the station's current live point rather than an old timestamp.
+- Next requests another eligible station for the committed country while excluding the current UUID.
+- Automatic country switching begins only after initial user-initiated playback.
+- On `error` or sustained `stalled`, report the failed UUID and request another station in the same committed country.
+- A country-resolution request runs at a modest cadence independent of Cesium's animation frames.
+- Ocean/unknown results cancel pending dwell timers but do not clear the committed radio country or current station.
 
-# Install dependencies (leveraging Docker layer caching)
-# Copy only dependency files first for better caching
-COPY pyproject.toml uv.lock ./
+## Radio panel presentation
 
-# Install dependencies with cache mount for faster rebuilds
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-install-project --no-dev
+Display:
 
-# Copy application code
-COPY app/ ./app/
+- Station name
+- Country code or country label
+- Station favicon with a safe visual fallback
+- A compact selection of tags
+- Live/connecting/paused/retrying/unavailable state
+- Play/Pause and Next controls
 
-# Install the project itself
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev
+Now-playing song and program metadata is out of scope. Do not display fake artist names, fake tracks, duration, seek position, animated progress pretending to represent a finite song, favorites, or personalization.
 
-# Production stage
-FROM python:3.13-slim
+# Testing strategy
 
-# Copy installed dependencies and application from builder
-COPY --from=builder /usr/local /usr/local
-COPY --from=builder /app /app
+## Backend tests
 
-WORKDIR /app
+- Mock DNS discovery and every `httpx` request.
+- Test mirror randomization/failover, timeouts, retryable errors, malformed JSON, and exhausted mirrors.
+- Test `stationuuid`, `countrycode`, `url_resolved`, click resolution, and descriptive User-Agent behavior.
+- Test HTTPS-only, non-HLS, MP3/AAC, broken-station, allowlist, and denylist filtering.
+- Test cache TTL, stale fallback, bounded negative cache, and exclusion of failed/current UUIDs.
+- Test ocean country resolution and representative land boundary points using offline fixtures.
+- Test no-station behavior without broadening the content, country, codec, or HTTPS rules.
+- Use FastAPI test clients for geographic, radio, satellite, health, validation, and CORS routes.
+- Automated tests must never require public DNS, Radio Browser availability, or a live broadcaster stream.
 
-# Set environment variables
-ENV DATABASE_PATH=/app/data/orbital_radio.db
-ENV PYTHONPATH=/app
-ENV PYTHONUNBUFFERED=1
+## Frontend tests
 
-# Create data directory
-RUN mkdir -p /app/data
+- Use fake timers to verify exactly three wall-clock seconds are required for a stable new country.
+- Verify the timer resets when a candidate country changes and cancels on ocean/unknown.
+- Verify simulation speed does not change dwell duration.
+- Verify initial audible playback requires a user action.
+- Verify automatic switching is inactive before that action.
+- Verify one audio element is reused when stations change.
+- Verify Pause/Play, Next, rejected `play()` promises, `error`, `stalled`, retry, and unavailable states.
+- Mock backend responses; Vitest and Playwright must not open live station streams.
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=40s \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
+## Coverage and quality
 
-# Start application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-```
+- Maintain meaningful unit coverage for selection, filtering, failover, dwell timing, and fallback behavior.
+- Prefer behavioral tests over tests that merely assert implementation details.
+- Use in-memory SQLite for satellite persistence tests.
+- Keep external data fixtures small and representative.
 
-## Documentation Requirements
+# Deployment
 
-### Code Documentation
-- All Python modules, classes, and functions must use [Google style docstrings](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings).
-- All functions and methods must include type hints using Python 3.12+ syntax (e.g., `List[str]`, `Dict[str, int]`, `| None` for optionals). Prefer classes from the `typing` module over built-in types for type hints to include for mapping types (e.g. `Dict[str, int]`). Do not use `typing.Any` unless absolutely necessary.
-- Docstrings should clearly describe the purpose, parameters, return values, and exceptions raised.
+- Deploy the FastAPI backend and Vue frontend on Railway or equivalent HTTPS origins.
+- Configure explicit frontend origins in `CORS_ORIGINS`.
+- Credentialed CORS is unnecessary because the application has no cookies or authorization headers.
+- The backend service needs ordinary outbound HTTPS/DNS access for Radio Browser metadata and TLE data.
+- Station audio bandwidth goes from the broadcaster to the browser, not through Railway.
+- The `/health` endpoint is the deployment health-check target.
 
-### README
-- The repository must include a `README.md` at the root level.
-- The README should provide:
-  - Project overview and purpose
-  - Directory structure explanation
-  - Setup instructions (Python version, uv installation, dependency installation, environment variables)
-  - How to run the backend locally (including database setup)
-  - How to run tests
+# Documentation and development rules
 
-## Development Setup
+## Python documentation and typing
 
-### Prerequisites
-- Python 3.13+
-- uv package manager
+- Use Google-style docstrings for Python modules, classes, and public functions.
+- Use Python 3.12+ type hints and `| None` for optionals.
+- Avoid `typing.Any` except at untrusted external-data boundaries, and normalize those values before returning application schemas.
+- Keep provider field names confined to the Radio Browser client and normalization code.
 
-### Project Setup
+## Development setup
+
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd orbital_radio/backend
-
-# Create virtual environment and install dependencies
+cd backend
 uv sync
-
-# Activate the virtual environment (if needed)
-source .venv/bin/activate  # macOS/Linux
-.venv\Scripts\activate     # Windows
-
-# Run the development server
 uv run uvicorn src.main:app --reload
-
-# Run tests
 uv run pytest
-
-# Run linter
 uv run ruff check .
-
-# Verify formatting
 uv run ruff format --check .
-
-# Add a new dependency
-uv add <package-name>
-
-# Add a development dependency
-uv add --dev <package-name>
 ```
 
-### Required Final Code-Quality Check
+For frontend work:
+
+```bash
+cd frontend
+npm ci
+npm run test
+npm run build
+```
+
+Use the exact scripts defined in `frontend/package.json`; run Playwright when changes affect end-to-end radio or globe behavior.
+
+## Required backend code-quality check
 
 After every backend code change, run both commands from `backend/` before considering the work complete:
 
@@ -651,4 +589,17 @@ uv run ruff check .
 uv run ruff format --check .
 ```
 
-Prefer to resolve Ruff findings in the code rather than suppressing them with `# noqa`, otherwise alert user to the issue.
+Resolve Ruff findings in code rather than suppressing them unless a suppression is necessary and explained.
+
+## README expectations
+
+Repository documentation must explain:
+
+- The satellite-to-country-to-radio concept
+- Anonymous live-radio behavior and the three-second dwell rule
+- Radio Browser's role and the best-effort nature of community metadata
+- HTTPS MP3/AAC playback constraints
+- Backend and frontend setup
+- Environment variables
+- Test and quality commands
+- The fact that the application links directly to broadcaster streams and does not relay or record audio
