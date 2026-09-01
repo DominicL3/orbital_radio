@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from src.core.geographic_mapper import GeographicMapper
 
 
@@ -15,11 +14,47 @@ def boundaries_file() -> Path:
 
 
 def test_loads_repository_boundaries(boundaries_file: Path) -> None:
-    """Load country geometries once and expose ISO-code keys."""
+    """Load country geometries and their lookup index once."""
     mapper = GeographicMapper(boundaries_file)
 
     assert mapper.country_boundaries
     assert {"US", "GB", "JP", "AU", "BR"}.issubset(mapper.country_boundaries)
+    assert len(mapper._country_codes) == len(mapper.country_boundaries)
+    assert len(mapper._prepared_country_geometries) == len(mapper.country_boundaries)
+
+
+def test_spatial_index_limits_country_candidates(tmp_path: Path) -> None:
+    """Query only the geometry envelopes that can contain the point."""
+    document = {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "properties": {"ISO_A2": "AA"},
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]],
+                },
+            },
+            {
+                "type": "Feature",
+                "properties": {"ISO_A2": "BB"},
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [[[100, 0], [101, 0], [101, 1], [100, 1], [100, 0]]],
+                },
+            },
+        ],
+    }
+    path = tmp_path / "boundaries.geojson"
+    path.write_text(json.dumps(document), encoding="utf-8")
+    mapper = GeographicMapper(path)
+
+    candidate_indexes = mapper._country_index.query(
+        mapper.country_boundaries["AA"].centroid
+    )
+
+    assert candidate_indexes.tolist() == [0]
 
 
 @pytest.mark.parametrize(

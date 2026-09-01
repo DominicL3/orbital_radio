@@ -16,6 +16,8 @@ from typing import Any
 from shapely.geometry import Point, shape
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import unary_union
+from shapely.prepared import PreparedGeometry, prep
+from shapely.strtree import STRtree
 from shapely.validation import make_valid
 
 from src.config import PROJECT_ROOT, get_settings
@@ -39,6 +41,9 @@ class GeographicMapper:
         configured_path = boundaries_file or get_settings().country_boundaries_file
         self.boundaries_file = self._resolve_path(configured_path)
         self.country_boundaries: dict[str, BaseGeometry] = {}
+        self._country_codes: tuple[str, ...] = ()
+        self._prepared_country_geometries: tuple[PreparedGeometry, ...] = ()
+        self._country_index = STRtree([])
         self._initialize_boundaries()
 
     @staticmethod
@@ -59,8 +64,17 @@ class GeographicMapper:
         return path.resolve()
 
     def _initialize_boundaries(self) -> None:
-        """Load country geometries once, merging multipart country features."""
+        """Load country geometries and build lookup structures once."""
         self.country_boundaries = self._load_boundary_data()
+        self._country_codes = tuple(self.country_boundaries)
+        country_geometries = tuple(
+            self.country_boundaries[country_code]
+            for country_code in self._country_codes
+        )
+        self._prepared_country_geometries = tuple(
+            prep(geometry) for geometry in country_geometries
+        )
+        self._country_index = STRtree(country_geometries)
 
     def _load_boundary_data(self) -> dict[str, BaseGeometry]:
         """Read the configured GeoJSON and return ISO-code keyed geometries."""
@@ -131,15 +145,12 @@ class GeographicMapper:
             raise ValueError("Longitude must be between -180 and 180")
 
     def get_country_code(self, latitude: float, longitude: float) -> str | None:
-        """Return the country containing a point, or ``None`` over water.
-
-        ``covers`` includes boundary points, which avoids turning a sampled
-        point exactly on a coastline into an ocean result.  It does not apply
-        any nearest-country or maritime-zone fallback.
-        """
+        """Return the country containing a point, or ``None`` over water."""
         self._validate_coordinates(latitude, longitude)
         point = Point(float(longitude), float(latitude))
-        for country_code, geometry in self.country_boundaries.items():
-            if geometry.covers(point):
-                return country_code
+        # Use an SRTree to efficiently find countries whose bounding boxes contain the point
+        for country_index in sorted(self._country_index.query(point)):
+            index = int(country_index)
+            if self._prepared_country_geometries[index].covers(point):
+                return self._country_codes[index]
         return None
