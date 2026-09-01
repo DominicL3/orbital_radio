@@ -24,7 +24,7 @@ from src.utils.exceptions import (
 logger = logging.getLogger(__name__)
 
 DEFAULT_DISCOVERY_HOST = "all.api.radio-browser.info"
-DEFAULT_USER_AGENT = "Orbital Radio/1.0 (live radio; hobby project)"
+DEFAULT_USER_AGENT = "Orbital Radio/1.0"
 MAX_RESULT_LIMIT = 100
 
 # Tags are intentionally broad because Radio Browser tags are community supplied.
