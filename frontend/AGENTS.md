@@ -9,16 +9,16 @@ For project-wide architecture, deployment, and session-policy decisions, see [`.
 - Cesium is initialized exactly once inside `src/features/globe/CesiumGlobe.vue`. Vue owns application state and controls; it must not make Cesium entities deeply reactive.
 - The current ISS motion is a demo simulation. Always label it as such. All position providers implement `OrbitPositionSource` so a later satellite.js/TLE provider can replace the demo source without changing the UI.
 - Model satellites as catalog entries even though the MVP catalog contains only the ISS. The intended future scale is a curated set of major LEO satellites, not every member of a constellation.
-- The radio panel is fixture-driven. Spotify OAuth and real playback are explicitly deferred.
+- The radio panel uses the anonymous backend radio API and owns one live HTMLAudioElement for each page visit. Audio streams are direct broadcaster HTTPS MP3/AAC connections; the frontend never proxies or relays audio.
 
 ## Boundaries
 
-- `src/contracts/` and `src/fixtures/` define shared data; feature code consumes them and must not duplicate their types.
+- `src/contracts/` defines shared application data; feature code consumes those types and must not duplicate them. Fixtures are test-only and must not stand in for provider behavior.
 - `src/features/globe/` exclusively owns Cesium lifecycle, entities, and camera actions.
 - `src/features/explorer/` owns overlays and simulation controls. It communicates with the globe through typed props/events/exposed methods only.
-- `src/features/radio/` owns mock radio state and presentation.
+- `src/features/radio/` owns station API mapping, the one-element live player, and station presentation. Keep country dwell timing in wall-clock milliseconds, independent of simulation speed.
 
 ## Commit messages
 
-- Use short, imperative, Title Case subjects that describe the completed change, such as `Remove decorative space confetti` or `Stabilize desktop title block layout`.
+- Use short, imperative sentence-case subjects that describe the completed change, capitalizing the first word plus proper nouns and acronyms only. For example: `Define anonymous radio API behavior` or `Remove decorative space confetti`.
 - Do not use Conventional Commit prefixes such as `feat:`, `fix:`, `chore:`, or scopes.

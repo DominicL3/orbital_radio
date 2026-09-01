@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import * as Cesium from 'cesium'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import type { SatelliteCatalogEntry } from '@/contracts/satellite'
+import type { OrbitPosition, SatelliteCatalogEntry } from '@/contracts/satellite'
 import { DemoOrbitPositionSource } from './DemoOrbitPositionSource'
 import {
   applyAlwaysDaylightGlobeOptions,
@@ -23,6 +23,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   (event: 'satellite-selected', satellite: SatelliteCatalogEntry): void
+  (event: 'position-updated', position: OrbitPosition): void
 }>()
 
 const cesiumHost = ref<HTMLElement | null>(null)
@@ -36,6 +37,7 @@ let orbitSource = new DemoOrbitPositionSource(props.satellite.id)
 let simulationTime = new Date('2026-08-23T00:00:00.000Z')
 let animationFrame: number | undefined
 let lastFrameTime: number | undefined
+let lastPositionEmitAt: number | undefined
 
 function toCartesian(position: ReturnType<DemoOrbitPositionSource['getPosition']>): Cesium.Cartesian3 | undefined {
   if (!Cesium.Cartesian3?.fromDegrees) return undefined
@@ -53,6 +55,13 @@ function syncSatellitePosition(): void {
   // Cesium accepts a Cartesian3 here and wraps it as a constant property at
   // runtime; the public Entity type models the more general property shape.
   if (position) satelliteEntity.position = position as never
+}
+
+function emitCurrentPosition(force = false): void {
+  const now = Date.now()
+  if (!force && lastPositionEmitAt !== undefined && now - lastPositionEmitAt < 1_000) return
+  lastPositionEmitAt = now
+  emit('position-updated', orbitSource.getPosition(simulationTime))
 }
 
 function syncOrbitPath(): void {
@@ -123,6 +132,7 @@ function startAnimation(): void {
       syncSatellitePosition()
       syncOrbitPath()
     }
+    emitCurrentPosition()
   }
 
   animationFrame = window.requestAnimationFrame(tick)
@@ -150,6 +160,10 @@ function focusSatellite(): void {
 }
 
 function initializeCesium(): void {
+  // Give the application an initial position even when WebGL or a Cesium ion
+  // token is unavailable. Subsequent samples are rate-limited to wall-clock
+  // once per second, independently of simulation speed.
+  emitCurrentPosition(true)
   if (!cesiumHost.value || typeof Cesium.Viewer !== 'function') {
     isFallback.value = true
     return
@@ -203,6 +217,7 @@ watch(() => props.satellite, (satellite) => {
   }
   syncSatellitePosition()
   syncOrbitPath()
+  emitCurrentPosition(true)
 })
 
 onMounted(initializeCesium)

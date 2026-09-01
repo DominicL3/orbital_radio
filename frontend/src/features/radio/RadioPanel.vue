@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { RadioState } from '@/contracts/radio'
+import { ref, watch } from 'vue'
+import type { RadioState, RadioStatus } from '@/contracts/radio'
 
 const props = defineProps<{
   state: RadioState
@@ -7,11 +8,29 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (event: 'toggle-play'): void
-  (event: 'next-track'): void
+  (event: 'next-station'): void
 }>()
 
-const togglePlay = () => emit('toggle-play')
-const nextTrack = () => emit('next-track')
+const faviconFailed = ref(false)
+const lastStationUuid = ref<string | null>(null)
+
+watch(() => props.state.station?.stationUuid ?? null, (stationUuid) => {
+  if (stationUuid !== lastStationUuid.value) {
+    lastStationUuid.value = stationUuid
+    faviconFailed.value = false
+  }
+}, { immediate: true })
+
+const statusLabels: Record<RadioStatus, string> = {
+  waiting: 'WAITING',
+  connecting: 'CONNECTING',
+  playing: 'ON AIR',
+  paused: 'PAUSED',
+  retrying: 'RETRYING',
+  unavailable: 'UNAVAILABLE',
+}
+
+const canPlay = () => Boolean(props.state.countryCode) && props.state.status !== 'connecting' && props.state.status !== 'retrying'
 </script>
 
 <template>
@@ -19,56 +38,71 @@ const nextTrack = () => emit('next-track')
     <div class="panel-heading">
       <div>
         <p class="eyebrow">ORBITAL RADIO</p>
-        <h2>Signal in transit</h2>
+        <h2>Live signal in transit</h2>
       </div>
       <span class="live-mark" :class="`is-${props.state.status}`">
         <span class="live-dot" aria-hidden="true"></span>
-        {{ props.state.status === 'ready' ? 'ON AIR' : props.state.status.toUpperCase() }}
+        {{ statusLabels[props.state.status] }}
       </span>
     </div>
 
-    <div v-if="props.state.status === 'loading'" class="state-message" role="status" aria-live="polite">
-      <span class="pulse-bars" aria-hidden="true"><i></i><i></i><i></i></span>
-      <span>Finding a signal…</span>
+    <div v-if="!props.state.station" class="state-message" :class="{ 'state-message--empty': props.state.status === 'unavailable' }" role="status" aria-live="polite">
+      <span v-if="props.state.status === 'connecting' || props.state.status === 'retrying'" class="pulse-bars" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span v-else class="empty-orbit" aria-hidden="true">∅</span>
+      <span>{{ props.state.status === 'unavailable' ? 'No transmission available' : props.state.countryCode ? 'Ready for a live station' : 'Waiting for a land signal' }}</span>
+      <small v-if="props.state.status === 'unavailable'">Check back when the next signal arrives.</small>
     </div>
 
-    <div v-else-if="props.state.status === 'empty' || !props.state.track" class="state-message state-message--empty" role="status">
-      <span class="empty-orbit" aria-hidden="true">∅</span>
-      <span>No transmission available</span>
-      <small>Check back when the next signal arrives.</small>
-    </div>
-
-    <template v-else>
-        <div class="track">
-          <div class="artwork" :style="props.state.track.artworkUrl ? { backgroundImage: `url(${props.state.track.artworkUrl})` } : undefined" role="img" :aria-label="`${props.state.track.title} artwork`">
-          <span v-if="!props.state.track.artworkUrl" class="artwork-glyph" aria-hidden="true">♫</span>
+    <template v-if="props.state.station">
+      <div class="station">
+        <div class="artwork" role="img" :aria-label="`${props.state.station.name} station icon`">
+          <img
+            v-if="props.state.station.faviconUrl && !faviconFailed"
+            :src="props.state.station.faviconUrl"
+            alt=""
+            @error="faviconFailed = true"
+          >
+          <span v-else class="artwork-glyph" aria-hidden="true">♫</span>
           <span class="artwork-star artwork-star--one" aria-hidden="true">✦</span>
           <span class="artwork-star artwork-star--two" aria-hidden="true">✦</span>
           <span class="artwork-ring artwork-ring--one" aria-hidden="true"></span>
           <span class="artwork-ring artwork-ring--two" aria-hidden="true"></span>
         </div>
-        <div class="track-copy">
-          <p class="track-kicker">NOW PLAYING</p>
-          <h3>{{ props.state.track.title }}</h3>
-          <p class="artist">{{ props.state.track.artist }}</p>
-          <p class="context"><span class="context-marker" aria-hidden="true">◎</span> {{ props.state.track.country }} <span class="context-separator">·</span> {{ props.state.track.countryCode }}</p>
+        <div class="station-copy">
+          <p class="station-kicker">LIVE STATION</p>
+          <h3>{{ props.state.station.name }}</h3>
+          <p class="context"><span class="context-marker" aria-hidden="true">◎</span> {{ props.state.station.countryCode }}</p>
+          <ul v-if="props.state.station.tags.length" class="tags" aria-label="Station tags">
+            <li v-for="tag in props.state.station.tags.slice(0, 4)" :key="tag">{{ tag }}</li>
+          </ul>
         </div>
       </div>
 
       <div class="signal-line" aria-hidden="true"><i v-for="bar in 36" :key="bar" :class="{ 'is-playing': props.state.isPlaying }" /></div>
-      <div class="progress-track" aria-hidden="true"><span :class="{ 'is-playing': props.state.isPlaying }"></span></div>
-      <div class="time-row"><span>LIVE SIGNAL</span><span>{{ props.state.track.durationLabel }}</span></div>
 
-      <div class="controls">
-        <button class="control-button control-button--skip" type="button" aria-label="Skip track" @click="nextTrack">
-          <span aria-hidden="true">↠</span>
-        </button>
-        <button class="control-button control-button--play" type="button" :aria-label="props.state.isPlaying ? 'Pause radio' : 'Play radio'" @click="togglePlay">
-          <span aria-hidden="true">{{ props.state.isPlaying ? 'Ⅱ' : '▶' }}</span>
-        </button>
-        <span class="control-hint">{{ props.state.isPlaying ? 'RECEIVING' : 'PAUSED' }}</span>
-      </div>
     </template>
+
+    <div class="controls">
+      <button
+        class="control-button control-button--next"
+        type="button"
+        aria-label="Next station"
+        :disabled="!props.state.countryCode || !props.state.station || props.state.status === 'connecting' || props.state.status === 'retrying'"
+        @click="emit('next-station')"
+      >
+        <span aria-hidden="true">↠</span>
+      </button>
+      <button
+        class="control-button control-button--play"
+        type="button"
+        :aria-label="props.state.isPlaying ? 'Pause radio' : 'Play radio'"
+        :disabled="!canPlay()"
+        @click="emit('toggle-play')"
+      >
+        <span aria-hidden="true">{{ props.state.isPlaying ? 'Ⅱ' : '▶' }}</span>
+      </button>
+      <span class="control-hint">{{ props.state.isPlaying ? 'RECEIVING' : props.state.status === 'paused' ? 'PAUSED' : 'LIVE RADIO' }}</span>
+    </div>
   </section>
 </template>
 
@@ -85,7 +119,6 @@ const nextTrack = () => emit('next-track')
 }
 
 .panel-heading,
-.time-row,
 .controls {
   display: flex;
   align-items: center;
@@ -93,8 +126,7 @@ const nextTrack = () => emit('next-track')
 }
 
 .eyebrow,
-.track-kicker,
-.time-row,
+.station-kicker,
 .control-hint {
   margin: 0;
   letter-spacing: 0.14em;
@@ -106,28 +138,30 @@ const nextTrack = () => emit('next-track')
 h2 { margin: 0.26rem 0 0; font-size: 1.03rem; font-weight: 600; letter-spacing: -0.02em; }
 
 .live-mark { display: inline-flex; align-items: center; gap: 0.38rem; color: #ffd76b; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.12em; }
-.live-mark.is-loading { color: #8fa8c3; }
-.live-mark.is-empty { color: #728298; }
+.live-mark.is-waiting, .live-mark.is-paused { color: #8fa8c3; }
+.live-mark.is-connecting, .live-mark.is-retrying { color: #e6a36b; }
+.live-mark.is-unavailable { color: #d686a9; }
 .live-dot { width: 0.42rem; height: 0.42rem; border-radius: 999px; background: currentColor; box-shadow: 0 0 0 0.2rem color-mix(in srgb, currentColor 14%, transparent); }
-.is-ready .live-dot { animation: blink 2s ease-in-out infinite; }
+.live-mark.is-playing .live-dot { animation: blink 2s ease-in-out infinite; }
 
-.track { display: flex; gap: 1rem; margin: 1.35rem 0 0.75rem; }
+.station { display: flex; gap: 1rem; margin: 1.35rem 0 0.75rem; }
 .artwork { position: relative; flex: none; display: grid; place-items: center; width: 5.2rem; height: 5.2rem; overflow: hidden; border: 1px solid rgba(255, 231, 124, 0.72); border-radius: 50%; background: conic-gradient(from 25deg, #ffdc68, #ff67b7 28%, #704dff 52%, #42d7ed 74%, #ffdc68); background-size: cover; box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.05), 0 0.5rem 1.3rem rgba(255, 65, 167, 0.34); }
-.artwork::before { position: absolute; width: 68%; height: 68%; content: ''; border: 1px solid rgba(27, 11, 76, 0.55); border-radius: 50%; background: repeating-radial-gradient(circle, rgba(22, 11, 57, 0.2) 0 2px, transparent 3px 5px), #31115b; }
-.artwork::after { position: absolute; inset: 0; content: ''; background: linear-gradient(135deg, rgba(255, 255, 255, 0.35), transparent 35%); }
+.artwork img { width: 100%; height: 100%; object-fit: cover; }
+.artwork::before { position: absolute; width: 68%; height: 68%; content: ''; border: 1px solid rgba(27, 11, 76, 0.55); border-radius: 50%; background: repeating-radial-gradient(circle, rgba(22, 11, 57, 0.2) 0 2px, transparent 3px 5px), #31115b; pointer-events: none; }
+.artwork::after { position: absolute; inset: 0; content: ''; background: linear-gradient(135deg, rgba(255, 255, 255, 0.35), transparent 35%); pointer-events: none; }
 .artwork-glyph { z-index: 2; color: #fff3b2; font-size: 1.25rem; line-height: 1; text-shadow: 0 1px 5px #150527; }
 .artwork-star { color: #fff3b2; font-size: 0.55rem; position: absolute; z-index: 2; }
 .artwork-star--one { right: 0.55rem; top: 0.7rem; }.artwork-star--two { bottom: 0.62rem; left: 0.68rem; }
 .artwork-ring { position: absolute; z-index: 1; border: 1px solid rgba(255, 234, 206, 0.38); border-radius: 50%; transform: rotate(-35deg); }
 .artwork-ring--one { width: 5.5rem; height: 1.6rem; }
 .artwork-ring--two { width: 1.8rem; height: 5.5rem; opacity: 0.55; }
-.track-copy { min-width: 0; padding-top: 0.1rem; }
-.track-kicker { color: #ff9ad2; }
+.station-copy { min-width: 0; padding-top: 0.1rem; }
+.station-kicker { color: #ff9ad2; }
 h3 { overflow: hidden; margin: 0.32rem 0 0.15rem; font-size: 1.12rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.artist, .context { margin: 0; color: #d4bddf; font-size: 0.77rem; }
-.context { display: flex; align-items: center; gap: 0.3rem; margin-top: 0.55rem; color: #e4d8ed; font-size: 0.64rem; letter-spacing: 0.04em; }
+.context { display: flex; align-items: center; gap: 0.3rem; margin: 0.55rem 0 0; color: #e4d8ed; font-size: 0.64rem; letter-spacing: 0.04em; }
 .context-marker { color: #75f3ee; font-size: 0.8rem; }
-.context-separator { color: #617387; }
+.tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0.55rem 0 0; padding: 0; list-style: none; }
+.tags li { padding: 0.18rem 0.34rem; border: 1px solid rgba(117, 241, 236, 0.22); border-radius: 0.3rem; color: #b9d9de; font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.06em; }
 
 .signal-line { align-items: flex-end; display: flex; justify-content: space-between; height: 1.55rem; margin-bottom: 0.25rem; overflow: hidden; padding: 0 0.1rem; }
 .signal-line i { flex: 0 0 0.14rem; width: 0.14rem; height: var(--rest-height); border-radius: 999px; background: linear-gradient(to top, #ff80c9, #77f6ed); opacity: 0.58; transform-origin: bottom; }
@@ -139,18 +173,15 @@ h3 { overflow: hidden; margin: 0.32rem 0 0.15rem; font-size: 1.12rem; font-weigh
 .signal-line i.is-playing { animation: equalize var(--tempo) ease-in-out infinite alternate; }
 .signal-line i.is-playing:nth-child(3n) { animation-delay: -180ms; }
 .signal-line i.is-playing:nth-child(4n) { animation-delay: -340ms; }
-.progress-track { height: 0.18rem; overflow: hidden; border-radius: 99px; background: rgba(255, 255, 255, 0.15); }
-.progress-track span { display: block; width: 29%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #6ef2eb, #ff69bd, #ffe475); transition: width 0.2s ease; }
-.progress-track span.is-playing { width: 55%; animation: progress 4s linear infinite alternate; }
-.time-row { margin-top: 0.42rem; color: #687c93; }
 
 .controls { justify-content: center; gap: 0.8rem; margin-top: 1rem; }
 .control-button { display: grid; place-items: center; border: 0; cursor: pointer; color: #dce9f5; background: transparent; transition: color 0.2s ease, transform 0.2s ease, background 0.2s ease; }
-.control-button:hover { color: #ffb2da; transform: translateY(-1px); }
+.control-button:hover:not(:disabled) { color: #ffb2da; transform: translateY(-1px); }
 .control-button:focus-visible { outline: 2px solid #78f1ec; outline-offset: 3px; }
+.control-button:disabled { cursor: not-allowed; opacity: 0.45; }
 .control-button--play { width: 2.8rem; height: 2.8rem; border-radius: 50%; color: #281040; background: linear-gradient(145deg, #ffe36e, #ff9ccf); box-shadow: 0 0.3rem 1rem rgba(255, 112, 190, 0.36); }
-.control-button--play:hover { color: #170427; background: #fff09c; }
-.control-button--skip { order: 2; font-size: 1.35rem; }
+.control-button--play:hover:not(:disabled) { color: #170427; background: #fff09c; }
+.control-button--next { order: 2; font-size: 1.35rem; }
 .control-button--play { order: 1; }
 .control-hint { order: 3; min-width: 4.2rem; color: #71869c; }
 
@@ -165,7 +196,6 @@ h3 { overflow: hidden; margin: 0.32rem 0 0.15rem; font-size: 1.12rem; font-weigh
 
 @keyframes blink { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
 @keyframes bars { to { height: 1.15rem; opacity: 0.48; } }
-@keyframes progress { from { width: 43%; } to { width: 66%; } }
 @keyframes equalize { to { height: var(--peak-height); opacity: 1; } }
 
 @media (prefers-reduced-motion: no-preference) { .artwork { animation: record-spin 15s linear infinite; } }

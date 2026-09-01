@@ -1,6 +1,6 @@
 # Orbital Radio Frontend
 
-Vue 3 + Vite + Cesium visual prototype for Orbital Radio. It shows a simulated ISS trajectory and a fixture-driven radio panel. It does **not** provide live satellite or Spotify playback data yet.
+Vue 3 + Vite + Cesium frontend for Orbital Radio. It shows a simulated ISS trajectory and resolves the simulated position through the anonymous backend to play live HTTPS MP3/AAC stations from Radio Browser. The backend selects and normalizes station metadata; the browser connects directly to the broadcaster and owns one audio element for the page visit.
 
 ## Run locally
 
@@ -13,6 +13,22 @@ npm run dev
 ```
 
 Vite prints a local URL, normally [http://localhost:5173](http://localhost:5173). Open that URL in a browser to use the globe.
+
+### Backend API
+
+Set `VITE_API_BASE_URL` when the backend is not served from the same origin. For
+local development, start FastAPI on `http://127.0.0.1:8000` and use:
+
+```bash
+VITE_API_BASE_URL=http://127.0.0.1:8000
+```
+
+The first land-country lookup must remain stable for three wall-clock seconds
+before the panel enables Play. A user gesture starts the live stream. Later
+country changes can switch stations automatically after a successful start;
+ocean and unknown positions leave the current broadcaster untouched. Pause
+detaches the stream and Play reconnects at the live edge. No account, cookie,
+favorite, listening history, or local-storage preference is used.
 
 ### Google Satellite imagery and terrain
 
