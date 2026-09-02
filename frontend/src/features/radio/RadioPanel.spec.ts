@@ -19,6 +19,7 @@ function state(overrides: Partial<RadioState> = {}): RadioState {
   return {
     status: 'paused',
     isPlaying: false,
+    volume: 70,
     station,
     countryCode: 'JP',
     candidateCountryCode: null,

@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RadioStation } from '@/contracts/radio'
 import type { RadioApi } from './radioApi'
-import type { AudioElementLike } from './radioState'
+import type { AudioElementLike, RadioVolumeStorage } from './radioState'
 import { createRadioPlayer } from './radioState'
 
 class FakeAudio implements AudioElementLike {
   src = ''
+  volume = 1
   preload = ''
   playCalls = 0
   pauseCalls = 0
@@ -45,6 +46,18 @@ class FakeAudio implements AudioElementLike {
   }
 }
 
+class FakeVolumeStorage implements RadioVolumeStorage {
+  readonly values = new Map<string, string>()
+
+  getItem(key: string): string | null {
+    return this.values.get(key) ?? null
+  }
+
+  setItem(key: string, value: string): void {
+    this.values.set(key, value)
+  }
+}
+
 function station(stationUuid: string, countryCode = 'JP'): RadioStation {
   return {
     stationUuid,
@@ -79,6 +92,48 @@ async function settle(): Promise<void> {
 describe('radio player', () => {
   beforeEach(() => vi.useFakeTimers())
   afterEach(() => vi.useRealTimers())
+
+  it('defaults the output volume to 70 percent', () => {
+    const audio = new FakeAudio()
+    const player = createRadioPlayer({ api: apiFor(), audioFactory: () => audio, volumeStorage: null })
+
+    expect(player.state.volume).toBe(70)
+    expect(audio.volume).toBe(0.7)
+  })
+
+  it('loads a saved volume and persists clamped volume changes', () => {
+    const audio = new FakeAudio()
+    const storage = new FakeVolumeStorage()
+    storage.setItem('orbital-radio.radio-volume.v1', '42')
+    const player = createRadioPlayer({ api: apiFor(), audioFactory: () => audio, volumeStorage: storage })
+
+    expect(player.state.volume).toBe(42)
+    expect(audio.volume).toBe(0.42)
+
+    player.setVolume(125)
+    expect(player.state.volume).toBe(100)
+    expect(audio.volume).toBe(1)
+    expect(storage.getItem('orbital-radio.radio-volume.v1')).toBe('100')
+
+    player.setVolume(-4)
+    expect(player.state.volume).toBe(0)
+    expect(audio.volume).toBe(0)
+    expect(storage.getItem('orbital-radio.radio-volume.v1')).toBe('0')
+  })
+
+  it('uses the default volume when saved storage is malformed or unavailable', () => {
+    const audio = new FakeAudio()
+    const storage: RadioVolumeStorage = {
+      getItem: () => 'loud',
+      setItem: () => { throw new Error('storage unavailable') },
+    }
+    const player = createRadioPlayer({ api: apiFor(), audioFactory: () => audio, volumeStorage: storage })
+
+    expect(player.state.volume).toBe(70)
+    player.setVolume(Number.NaN)
+    expect(player.state.volume).toBe(70)
+    expect(audio.volume).toBe(0.7)
+  })
 
   it('waits exactly 3 wall-clock seconds and does not select before the first gesture', async () => {
     const audio = new FakeAudio()
@@ -159,6 +214,20 @@ describe('radio player', () => {
     expect(player.state.status).toBe('playing')
     expect(audio.playCalls).toBe(2)
     expect(api.selectStation.mock.calls[1]?.[1]).toContain('jp-1')
+  })
+
+  it('keeps the selected volume while changing stations', async () => {
+    const audio = new FakeAudio()
+    const player = createRadioPlayer({ api: apiFor([station('jp-1'), station('jp-2')]), audioFactory: () => audio, volumeStorage: null })
+    player.setVolume(36)
+    player.observeCountry('JP')
+    vi.advanceTimersByTime(3_000)
+    await player.toggle()
+    await player.next()
+
+    expect(player.state.station?.stationUuid).toBe('jp-2')
+    expect(player.state.volume).toBe(36)
+    expect(audio.volume).toBe(0.36)
   })
 
   it('falls back after a rejected play without creating another audio element', async () => {

@@ -20,6 +20,8 @@ export type RadioStatus = 'waiting' | 'connecting' | 'playing' | 'paused' | 'ret
 export interface RadioState {
   status: RadioStatus
   isPlaying: boolean
+  /** User-selected output volume from 0 (mute) through 100. */
+  volume: number
   station: RadioStation | null
   /** The country whose station is currently selected, if any. */
   countryCode: string | null

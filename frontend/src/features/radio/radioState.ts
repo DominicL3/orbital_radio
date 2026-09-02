@@ -4,6 +4,7 @@ import type { RadioApi } from './radioApi'
 
 export interface AudioElementLike {
   src: string
+  volume: number
   preload?: string
   play(): Promise<void> | void
   pause(): void
@@ -13,9 +14,15 @@ export interface AudioElementLike {
   removeEventListener(type: string, listener: (event: Event) => void): void
 }
 
+export interface RadioVolumeStorage {
+  getItem(key: string): string | null
+  setItem(key: string, value: string): void
+}
+
 export interface RadioPlayerOptions {
   api: RadioApi
   audioFactory?: () => AudioElementLike
+  volumeStorage?: RadioVolumeStorage | null
   dwellMs?: number
   maxAutomaticRetries?: number
   recentStationLimit?: number
@@ -31,6 +38,8 @@ export interface RadioPlayer {
   toggle(): Promise<void>
   /** Select another station for the committed country. */
   next(): Promise<void>
+  /** Update the user-selected output volume from 0 (mute) through 100. */
+  setVolume(percent: number): void
   /** Release timers, listeners, and the single page-lifetime audio element. */
   dispose(): void
   /** Exposed for deterministic tests and diagnostics, never for a second player. */
@@ -42,6 +51,8 @@ const DEFAULT_MAX_AUTOMATIC_RETRIES = 3
 const DEFAULT_RECENT_STATION_LIMIT = 32
 const DEFAULT_FAILED_STATION_LIMIT = 64
 const DEFAULT_FAILED_STATION_TTL_MS = 10 * 60 * 1_000
+const DEFAULT_VOLUME_PERCENT = 70
+const VOLUME_STORAGE_KEY = 'orbital-radio.radio-volume.v1'
 
 /**
  * Own one live audio connection for the lifetime of the page. No station is
@@ -57,13 +68,17 @@ export function createRadioPlayer(options: RadioPlayerOptions): RadioPlayer {
     recentStationLimit = DEFAULT_RECENT_STATION_LIMIT,
     failedStationLimit = DEFAULT_FAILED_STATION_LIMIT,
     failedStationTtlMs = DEFAULT_FAILED_STATION_TTL_MS,
+    volumeStorage = getBrowserVolumeStorage(),
   } = options
 
   const audio = audioFactory()
   audio.preload = 'none'
+  const initialVolume = readStoredVolume(volumeStorage)
+  audio.volume = initialVolume / 100
   const state = reactive<RadioState>({
     status: 'waiting',
     isPlaying: false,
+    volume: initialVolume,
     station: null,
     countryCode: null,
     candidateCountryCode: null,
@@ -223,6 +238,13 @@ export function createRadioPlayer(options: RadioPlayerOptions): RadioPlayer {
       return
     }
     await runAutomaticFallback()
+  }
+
+  function setVolume(percent: number): void {
+    const volume = normalizeVolumePercent(percent)
+    state.volume = volume
+    audio.volume = volume / 100
+    persistVolume(volumeStorage, volume)
   }
 
   function dispose(): void {
@@ -447,6 +469,7 @@ export function createRadioPlayer(options: RadioPlayerOptions): RadioPlayer {
     observeCountry,
     toggle,
     next,
+    setVolume,
     dispose,
     getAudioElement: () => audio,
   }
@@ -456,6 +479,42 @@ function normalizeCountryCode(countryCode: string | null): string | null {
   if (!countryCode) return null
   const normalized = countryCode.trim().toUpperCase()
   return /^[A-Z]{2}$/.test(normalized) ? normalized : null
+}
+
+function readStoredVolume(storage: RadioVolumeStorage | null): number {
+  if (!storage) return DEFAULT_VOLUME_PERCENT
+  try {
+    const stored = storage.getItem(VOLUME_STORAGE_KEY)
+    if (stored === null || !/^\d{1,3}$/.test(stored)) return DEFAULT_VOLUME_PERCENT
+    const volume = Number(stored)
+    return volume >= 0 && volume <= 100 ? volume : DEFAULT_VOLUME_PERCENT
+  } catch {
+    return DEFAULT_VOLUME_PERCENT
+  }
+}
+
+function normalizeVolumePercent(percent: number): number {
+  const value = Number(percent)
+  if (!Number.isFinite(value)) return DEFAULT_VOLUME_PERCENT
+  return Math.min(100, Math.max(0, Math.round(value)))
+}
+
+function persistVolume(storage: RadioVolumeStorage | null, volume: number): void {
+  if (!storage) return
+  try {
+    storage.setItem(VOLUME_STORAGE_KEY, String(volume))
+  } catch {
+    // Private browsing or quota restrictions must not disrupt live playback.
+  }
+}
+
+function getBrowserVolumeStorage(): RadioVolumeStorage | null {
+  if (typeof window === 'undefined') return null
+  try {
+    return window.localStorage
+  } catch {
+    return null
+  }
 }
 
 function createBrowserAudio(): AudioElementLike {
