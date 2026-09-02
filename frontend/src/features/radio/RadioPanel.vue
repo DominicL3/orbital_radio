@@ -9,6 +9,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (event: 'toggle-play'): void
   (event: 'next-station'): void
+  (event: 'set-volume', percent: number): void
 }>()
 
 const faviconFailed = ref(false)
@@ -31,6 +32,10 @@ const statusLabels: Record<RadioStatus, string> = {
 }
 
 const canPlay = () => Boolean(props.state.countryCode) && props.state.status !== 'connecting' && props.state.status !== 'retrying'
+
+function setVolume(event: Event): void {
+  emit('set-volume', Number((event.target as HTMLInputElement).value))
+}
 </script>
 
 <template>
@@ -81,6 +86,22 @@ const canPlay = () => Boolean(props.state.countryCode) && props.state.status !==
       <div class="signal-line" aria-hidden="true"><i v-for="bar in 36" :key="bar" :class="{ 'is-playing': props.state.isPlaying }" /></div>
 
     </template>
+
+    <div class="volume-control">
+      <label for="radio-volume">VOLUME</label>
+      <input
+        id="radio-volume"
+        type="range"
+        min="0"
+        max="100"
+        step="1"
+        :value="props.state.volume"
+        aria-label="Radio volume"
+        :aria-valuetext="`${props.state.volume}%`"
+        @input="setVolume"
+      >
+      <output for="radio-volume">{{ props.state.volume }}%</output>
+    </div>
 
     <div class="controls">
       <button
@@ -173,6 +194,15 @@ h3 { overflow: hidden; margin: 0.32rem 0 0.15rem; font-size: 1.12rem; font-weigh
 .signal-line i.is-playing { animation: equalize var(--tempo) ease-in-out infinite alternate; }
 .signal-line i.is-playing:nth-child(3n) { animation-delay: -180ms; }
 .signal-line i.is-playing:nth-child(4n) { animation-delay: -340ms; }
+
+.volume-control { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.65rem; margin-top: 1rem; color: #85f3ef; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.14em; }
+.volume-control input { width: 100%; height: 0.75rem; margin: 0; appearance: none; cursor: pointer; background: transparent; }
+.volume-control input::-webkit-slider-runnable-track { height: 0.2rem; border-radius: 999px; background: linear-gradient(90deg, #78f1ec, #ff8bcb); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.13); }
+.volume-control input::-webkit-slider-thumb { width: 0.78rem; height: 0.78rem; margin-top: -0.29rem; appearance: none; border: 2px solid #2b104c; border-radius: 50%; background: #fff1a6; box-shadow: 0 0.1rem 0.4rem rgba(0, 0, 0, 0.36); }
+.volume-control input::-moz-range-track { height: 0.2rem; border-radius: 999px; background: linear-gradient(90deg, #78f1ec, #ff8bcb); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.13); }
+.volume-control input::-moz-range-thumb { width: 0.6rem; height: 0.6rem; border: 2px solid #2b104c; border-radius: 50%; background: #fff1a6; box-shadow: 0 0.1rem 0.4rem rgba(0, 0, 0, 0.36); }
+.volume-control input:focus-visible { outline: 2px solid #78f1ec; outline-offset: 3px; }
+.volume-control output { min-width: 2.6rem; color: #fff3b2; text-align: right; }
 
 .controls { justify-content: center; gap: 0.8rem; margin-top: 1rem; }
 .control-button { display: grid; place-items: center; border: 0; cursor: pointer; color: #dce9f5; background: transparent; transition: color 0.2s ease, transform 0.2s ease, background 0.2s ease; }

@@ -40,11 +40,25 @@ describe('RadioPanel', () => {
     expect(wrapper.find('.progress-track').exists()).toBe(false)
     expect(wrapper.findAll('.signal-line i')).toHaveLength(36)
     expect(wrapper.findAll('.signal-line i.is-playing')).toHaveLength(0)
+    expect(wrapper.get('[aria-label="Radio volume"]').attributes('min')).toBe('0')
+    expect(wrapper.get('[aria-label="Radio volume"]').attributes('max')).toBe('100')
+    expect(wrapper.get('output').text()).toBe('70%')
 
     await wrapper.get('[aria-label="Play radio"]').trigger('click')
     await wrapper.get('[aria-label="Next station"]').trigger('click')
     expect(wrapper.emitted('toggle-play')).toHaveLength(1)
     expect(wrapper.emitted('next-station')).toHaveLength(1)
+  })
+
+  it('emits an accessible volume-slider change', async () => {
+    const wrapper = mount(RadioPanel, { props: { state: state({ volume: 36 }) } })
+    const slider = wrapper.get('[aria-label="Radio volume"]')
+
+    expect(slider.attributes('aria-valuetext')).toBe('36%')
+    expect(wrapper.get('output').text()).toBe('36%')
+    await slider.setValue('18')
+
+    expect(wrapper.emitted('set-volume')).toEqual([[18]])
   })
 
   it('animates the signal only while the station is playing', async () => {

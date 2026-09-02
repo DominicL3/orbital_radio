@@ -54,6 +54,14 @@ test('starts, pauses, reconnects, and skips mocked live stations without public 
   const playButton = page.getByRole('button', { name: 'Play radio' })
   await expect(playButton).toBeEnabled({ timeout: 6_000 })
 
+  const volumeSlider = page.getByLabel('Radio volume')
+  await volumeSlider.evaluate((input: HTMLInputElement) => {
+    input.value = '36'
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  await expect(volumeSlider).toHaveValue('36')
+  await expect.poll(() => page.locator('audio').evaluate((audio: HTMLAudioElement) => audio.volume)).toBe(0.36)
+
   await playButton.click()
   await expect(page.getByText('Orbital FM One')).toBeVisible()
   await expect(page.getByText('ON AIR')).toBeVisible()

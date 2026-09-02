@@ -71,6 +71,10 @@ function nextStation() {
   void radioPlayer.next()
 }
 
+function setRadioVolume(percent: number) {
+  radioPlayer.setVolume(percent)
+}
+
 onBeforeUnmount(() => {
   latestPositionRequest += 1
   countryRequestController?.abort()
@@ -113,7 +117,7 @@ onBeforeUnmount(() => {
     </aside>
 
     <aside class="radio-overlay">
-      <RadioPanel :state="radioState" @toggle-play="toggleRadio" @next-station="nextStation" />
+      <RadioPanel :state="radioState" @toggle-play="toggleRadio" @next-station="nextStation" @set-volume="setRadioVolume" />
     </aside>
   </main>
 </template>
