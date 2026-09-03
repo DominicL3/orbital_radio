@@ -8,6 +8,7 @@ import type { OrbitPosition, OrbitPositionSource } from '@/contracts/satellite'
  */
 export class DemoOrbitPositionSource implements OrbitPositionSource {
   readonly satelliteId: string
+  readonly pathDurationSeconds: number
 
   private readonly epoch: number
   private readonly periodSeconds: number
@@ -26,6 +27,7 @@ export class DemoOrbitPositionSource implements OrbitPositionSource {
     this.satelliteId = satelliteId
     this.epoch = (options.epoch ?? new Date('2026-08-23T00:00:00.000Z')).getTime()
     this.periodSeconds = options.periodSeconds ?? 92.68 * 60
+    this.pathDurationSeconds = this.periodSeconds
     this.inclinationRadians = ((options.inclinationDeg ?? 51.6) * Math.PI) / 180
     this.altitudeKm = options.altitudeKm ?? 408
   }
@@ -65,4 +67,3 @@ export class DemoOrbitPositionSource implements OrbitPositionSource {
 function wrapDegrees(degrees: number): number {
   return ((degrees + 180) % 360 + 360) % 360 - 180
 }
-

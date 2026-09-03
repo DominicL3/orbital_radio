@@ -3,6 +3,7 @@ import * as Cesium from 'cesium'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { OrbitPosition, SatelliteCatalogEntry } from '@/contracts/satellite'
 import { DemoOrbitPositionSource } from './DemoOrbitPositionSource'
+import { InterpolatedOrbitPositionSource } from './InterpolatedOrbitPositionSource'
 import {
   applyAlwaysDaylightGlobeOptions,
   applyCountryScaleZoomLimit,
@@ -33,13 +34,24 @@ const isSatelliteImageryUnavailable = ref(false)
 let viewer: Cesium.Viewer | undefined
 let satelliteEntity: Cesium.Entity | undefined
 let orbitEntity: Cesium.Entity | undefined
-let orbitSource = new DemoOrbitPositionSource(props.satellite.id)
+function createOrbitSource(satelliteId: string): InterpolatedOrbitPositionSource {
+  const source = new DemoOrbitPositionSource(satelliteId)
+  return new InterpolatedOrbitPositionSource(source, {
+    sampleIntervalSeconds: 5,
+    cacheWindowSeconds: source.pathDurationSeconds,
+  })
+}
+
+const ORBIT_PATH_UPDATE_INTERVAL_MS = 200
+
+let orbitSource = createOrbitSource(props.satellite.id)
 let simulationTime = new Date('2026-08-23T00:00:00.000Z')
 let animationFrame: number | undefined
 let lastFrameTime: number | undefined
 let lastPositionEmitAt: number | undefined
+let lastOrbitPathUpdateAt: number | undefined
 
-function toCartesian(position: ReturnType<DemoOrbitPositionSource['getPosition']>): Cesium.Cartesian3 | undefined {
+function toCartesian(position: OrbitPosition): Cesium.Cartesian3 | undefined {
   if (!Cesium.Cartesian3?.fromDegrees) return undefined
   return Cesium.Cartesian3.fromDegrees(position.longitudeDeg, position.latitudeDeg, position.altitudeKm * 1000)
 }
@@ -49,23 +61,26 @@ function colorFromCss(color: string): Cesium.Color | undefined {
   return Cesium.Color.fromCssColorString(color)
 }
 
-function syncSatellitePosition(): void {
+function syncSatellitePosition(position: OrbitPosition): void {
   if (!satelliteEntity) return
-  const position = toCartesian(orbitSource.getPosition(simulationTime))
+  const cartesianPosition = toCartesian(position)
   // Cesium accepts a Cartesian3 here and wraps it as a constant property at
   // runtime; the public Entity type models the more general property shape.
-  if (position) satelliteEntity.position = position as never
+  if (cartesianPosition) satelliteEntity.position = cartesianPosition as never
 }
 
-function emitCurrentPosition(force = false): void {
+function emitCurrentPosition(position: OrbitPosition, force = false): void {
   const now = Date.now()
   if (!force && lastPositionEmitAt !== undefined && now - lastPositionEmitAt < 1_000) return
   lastPositionEmitAt = now
-  emit('position-updated', orbitSource.getPosition(simulationTime))
+  emit('position-updated', position)
 }
 
-function syncOrbitPath(): void {
+function syncOrbitPath(force = false): void {
   if (!viewer || !orbitEntity) return
+  const now = Date.now()
+  if (!force && lastOrbitPathUpdateAt !== undefined && now - lastOrbitPathUpdateAt < ORBIT_PATH_UPDATE_INTERVAL_MS) return
+  lastOrbitPathUpdateAt = now
   const positions = props.showOrbitPath
     ? orbitSource.getPath?.(simulationTime, 96)?.map(toCartesian).filter((position): position is Cesium.Cartesian3 => Boolean(position))
     : undefined
@@ -106,7 +121,7 @@ function addEntities(): void {
     name: `${props.satellite.name} orbit`,
     show: props.showOrbitPath,
   })
-  syncOrbitPath()
+  syncOrbitPath(true)
 }
 
 function handlePick(movement: { position: unknown }): void {
@@ -129,10 +144,13 @@ function startAnimation(): void {
 
     if (props.isPlaying) {
       simulationTime = new Date(simulationTime.getTime() + deltaSeconds * props.speed * 1000)
-      syncSatellitePosition()
+      const position = orbitSource.getPosition(simulationTime)
+      syncSatellitePosition(position)
       syncOrbitPath()
+      emitCurrentPosition(position)
+    } else {
+      emitCurrentPosition(orbitSource.getPosition(simulationTime))
     }
-    emitCurrentPosition()
   }
 
   animationFrame = window.requestAnimationFrame(tick)
@@ -163,7 +181,7 @@ function initializeCesium(): void {
   // Give the application an initial position even when WebGL or a Cesium ion
   // token is unavailable. Subsequent samples are rate-limited to wall-clock
   // once per second, independently of simulation speed.
-  emitCurrentPosition(true)
+  emitCurrentPosition(orbitSource.getPosition(simulationTime), true)
   if (!cesiumHost.value || typeof Cesium.Viewer !== 'function') {
     isFallback.value = true
     return
@@ -208,16 +226,17 @@ function initializeCesium(): void {
   }
 }
 
-watch(() => props.showOrbitPath, syncOrbitPath)
+watch(() => props.showOrbitPath, () => syncOrbitPath(true))
 watch(() => props.satellite, (satellite) => {
-  orbitSource = new DemoOrbitPositionSource(satellite.id)
+  orbitSource = createOrbitSource(satellite.id)
   if (satelliteEntity) {
     satelliteEntity.id = satellite.id
     satelliteEntity.name = satellite.name
   }
-  syncSatellitePosition()
-  syncOrbitPath()
-  emitCurrentPosition(true)
+  const position = orbitSource.getPosition(simulationTime)
+  syncSatellitePosition(position)
+  syncOrbitPath(true)
+  emitCurrentPosition(position, true)
 })
 
 onMounted(initializeCesium)
